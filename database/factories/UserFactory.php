@@ -47,6 +47,11 @@ class UserFactory extends Factory
         return $this->withRole(Role::MANAGER);
     }
 
+    public function courier(): static
+    {
+        return $this->withRole(Role::COURIER);
+    }
+
     public function admin(): static
     {
         return $this->withRole(Role::ADMIN);

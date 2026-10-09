@@ -117,8 +117,8 @@ class ReportService
         $rows = OrderItem::query()
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->whereIn('orders.status', OrderStatus::revenueStatuses())
-            ->selectRaw('order_items.name as name, SUM(order_items.quantity) as qty, SUM(order_items.line_total) as revenue')
-            ->groupBy('order_items.name')->orderByDesc('qty')->limit($limit)->get();
+            ->selectRaw('order_items.product_id, order_items.name as name, SUM(order_items.quantity) as qty, SUM(order_items.line_total) as revenue')
+            ->groupBy('order_items.product_id', 'order_items.name')->orderByDesc('qty')->limit($limit)->get();
 
         return ['labels' => $rows->pluck('name')->all(), 'data' => $rows->pluck('qty')->map(fn ($v) => (int) $v)->all(), 'rows' => $rows];
     }
@@ -130,9 +130,13 @@ class ReportService
             ->join('products', 'products.id', '=', 'order_items.product_id')
             ->join('categories', 'categories.id', '=', 'products.category_id')
             ->whereIn('orders.status', OrderStatus::revenueStatuses())
-            ->selectRaw('categories.name_ar as name, SUM(order_items.line_total) as revenue')
-            ->groupBy('categories.name_ar')->orderByDesc('revenue')->limit($limit)->get();
+            ->selectRaw('categories.id as category_id, categories.name_ar as name, SUM(order_items.line_total) as revenue')
+            ->groupBy('categories.id', 'categories.name_ar')->orderByDesc('revenue')->limit($limit)->get();
 
-        return ['labels' => $rows->pluck('name')->all(), 'data' => $rows->pluck('revenue')->map(fn ($v) => round((float) $v, 2))->all()];
+        return [
+            'labels' => $rows->pluck('name')->all(),
+            'data' => $rows->pluck('revenue')->map(fn ($v) => round((float) $v, 2))->all(),
+            'rows' => $rows,
+        ];
     }
 }

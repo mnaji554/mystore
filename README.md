@@ -18,7 +18,7 @@
 
 **لوحة التحكم:** إحصائيات ومخططات (Chart.js)، المنتجات (CRUD، رفع صور متعددة، ترتيب، صورة رئيسية، Variants، مخزون، بحث/فلترة/ترتيب، حذف جماعي)، التصنيفات، الطلبات (تغيير الحالة + سجل + تتبع + فاتورة PDF + إشعار)، العملاء، الكوبونات، الشحن، التقييمات (موافقة/رفض)، الإعدادات، الرسائل، الإشعارات.
 
-**الأدوار:** Super Admin · Admin · Manager · Customer (Gates + Policies، وكل أكشن Livewire يُفوَّض مرة أخرى على الخادم).
+**الأدوار:** Super Admin · Admin · Manager · Courier · Customer (Gates + Policies، وكل أكشن Livewire يُفوَّض مرة أخرى على الخادم).
 
 **المعمارية:** `Services` (Cart / Order / Payment / Coupon / Shipping / Invoice / Image / Report / Review) + `Repositories` + `Events/Listeners` + `Jobs` + `Notifications` + `Mail` + `Policies` + `Form Requests`. كل الأسعار تُحسب **على الخادم** من قاعدة البيانات ولا يُثق بأي قيمة قادمة من المتصفح.
 
@@ -113,6 +113,7 @@ Super Admin وAdmin وManager وعميل تجريبي و12 عميلاً · 10 ت
 | Super Admin | كل شيء بما فيها تعيين الأدوار |
 | Admin | كل شيء عدا إدارة الأدوار |
 | Manager | المنتجات، التصنيفات، الطلبات، التقييمات (بدون حذف) |
+| Courier | الطلبات المسندة إليه وتحديث مراحل التوصيل |
 | Customer | حسابه فقط |
 
 ## 4) الطابور (Queue) والجدولة (Scheduler)
@@ -146,10 +147,19 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 - عند تعبئة المفتاحين تظهر طريقة «بطاقة ائتمانية» تلقائياً في Checkout (وتختفي بدونهما).
 - Webhook: أضف في لوحة Stripe نقطة `https://your-domain.com/webhooks/stripe` للأحداث `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`. محلياً: `stripe listen --forward-to localhost:8000/webhooks/stripe`.
 - التحقق من التوقيع إلزامي، وتأكيد الدفع **idempotent** (آمن عند تكرار الإشعار).
+- استخدم مفاتيح الاختبار أولاً، واجعل `APP_URL` عنواناً عاماً عبر HTTPS عند تجربة Webhook في بيئة منشورة. لا تضع المفاتيح السرية في Git.
+
+## 6) إعداد التوصيل والمناديب
+
+- من **لوحة التحكم ← الشحن ← طرق الشحن** أضف طريقة التوصيل وحدد رسومها، مدة التوصيل، وحد الشحن المجاني الاختياري. تُحسب الرسوم على الخادم وتُحفظ مع الطلب، فلا تتغير رسوم الطلبات القديمة عند تعديل الطريقة.
+- من تبويب **المناديب** أنشئ حساباً لكل مندوب أو أوقف حسابه. حساب المندوب لا يملك صلاحية لوحة الإدارة، ويُحوَّل بعد تسجيل الدخول إلى صفحة **طلبات التوصيل**.
+- يمكن حفظ رقم الهوية (10 أرقام)، ولوحة المركبة، ورقم رخصة القيادة، مع صور الهوية واستمارة المركبة والرخصة. الأرقام مشفّرة في قاعدة البيانات، والوثائق محفوظة على قرص خاص ولا يمكن تنزيلها إلا لمستخدم يملك صلاحية إدارة الشحن.
+- بعد بدء تجهيز الطلب، افتح تفاصيله من **الطلبات** وأسند مندوباً نشطاً. يستطيع المندوب رؤية طلباته المسندة فقط، وتحديث الحالة من «قيد التجهيز» إلى «تم الشحن» ثم «تم التسليم».
+- عند تسليم طلب الدفع عند الاستلام يُسجَّل الدفع تلقائياً، كما في تدفق الطلبات الحالي.
 
 **إضافة بوابة جديدة** (Moyasar / Tap / PayTabs / Apple Pay / STC Pay): أنشئ كلاساً يطبّق `App\Contracts\PaymentGateway` (`key, label, description, isAvailable, initiate, refund`) وسجّله في `config/payments.php`. لا حاجة لتعديل أي كود آخر.
 
-## 6) إعداد البريد
+## 7) إعداد البريد
 
 الافتراضي `MAIL_MAILER=log` (الرسائل تُكتب في `storage/logs/laravel.log`). للإرسال الفعلي:
 
@@ -166,17 +176,17 @@ STORE_ADMIN_EMAIL=orders@your-domain.com   # يستلم إشعارات الطل�
 
 قوالب البريد (عربية RTL) في `resources/views/emails`: ترحيب، إنشاء الطلب، تأكيد، تجهيز، شحن، تسليم، إلغاء، استرجاع، إعادة تعيين كلمة المرور. لإضافة SMS/WhatsApp أضف قناة في `config/store.php → extra_notification_channels`.
 
-## 7) الاختبارات والفحص
+## 8) الاختبارات والفحص
 
 ```bash
-php artisan test                  # 137 اختباراً (Auth, Products, Cart, Coupon, Checkout, Orders, Payments, Permissions, Reviews, Admin, API)
+php artisan test                  # (Auth, Products, Cart, Coupon, Checkout, Orders, Payments, Couriers, Permissions, Reviews, Admin, API)
 vendor/bin/pint                   # تنسيق الكود
 php artisan route:list
 ```
 
 تعمل الاختبارات على SQLite في الذاكرة ولا تمس قاعدة بياناتك.
 
-## 8) الإنتاج
+## 9) الإنتاج
 
 ```bash
 composer install --no-dev --optimize-autoloader
@@ -197,11 +207,11 @@ php artisan config:cache && php artisan route:cache && php artisan view:cache &&
 - استخدم Redis للكاش والطابور عند ارتفاع الحمل (`CACHE_STORE=redis`, `QUEUE_CONNECTION=redis`).
 - للانتقال إلى Meilisearch/Algolia: اربط تطبيقاً جديداً للواجهة `App\Contracts\ProductSearch` في `AppServiceProvider`.
 
-## 9) الأمان — ما هو مطبّق
+## 10) الأمان — ما هو مطبّق
 
 CSRF · حماية XSS (تهريب Blade + تنظيف المدخلات) · Eloquent/Query Builder (بدون SQL خام من مدخلات) · حماية Mass Assignment (`role_id` و`is_active` غير قابلين للتعبئة الجماعية) · Policies/Gates على المسارات **وعلى كل أكشن Livewire** · Rate Limiting (دخول، تسجيل، API، Checkout، نماذج) · تشفير كلمات المرور (bcrypt) · Form Requests · رفع آمن للصور (إعادة ترميز إلى WebP، التحقق من MIME الحقيقي، أسماء عشوائية) · Honeypot في نموذج التواصل · ترويسات أمان · حماية مسارات الإدارة · عدم كشف وجود البريد عند استعادة كلمة المرور · تتبع الطلب للزوار برقم الطلب + البريد.
 
-## 10) هيكل المشروع
+## 11) هيكل المشروع
 
 ```
 app/

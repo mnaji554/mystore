@@ -11,19 +11,36 @@ class Settings extends Component
 {
     use WithFileUploads;
 
+    private const FORM_FIELDS = [
+        'store_name', 'store_tagline', 'currency', 'currency_symbol', 'tax_enabled', 'tax_rate', 'low_stock_threshold',
+        'contact_email', 'contact_phone', 'contact_address', 'vat_number', 'meta_description',
+        'payment_cod_enabled', 'payment_stripe_enabled',
+    ];
+
+    private const BOOLEAN_FIELDS = ['tax_enabled', 'payment_cod_enabled', 'payment_stripe_enabled'];
+
     public array $form = [];
 
     public $logo = null;
+
+    public bool $stripeCredentialsConfigured = false;
+
+    public bool $stripeWebhookConfigured = false;
 
     public function mount(): void
     {
         $this->authorize('manage-settings');
 
-        foreach (['store_name', 'store_tagline', 'currency', 'currency_symbol', 'tax_enabled', 'tax_rate', 'low_stock_threshold',
-            'contact_email', 'contact_phone', 'contact_address', 'vat_number', 'meta_description'] as $key) {
-            $this->form[$key] = (string) Setting::get($key, '');
+        foreach (self::FORM_FIELDS as $key) {
+            $value = Setting::get($key, '');
+            $this->form[$key] = in_array($key, self::BOOLEAN_FIELDS, true)
+                ? (bool) (int) $value
+                : (string) $value;
         }
-        $this->form['tax_enabled'] = (bool) (int) $this->form['tax_enabled'];
+
+        $this->stripeCredentialsConfigured = filled(config('services.stripe.key'))
+            && filled(config('services.stripe.secret'));
+        $this->stripeWebhookConfigured = filled(config('services.stripe.webhook_secret'));
     }
 
     public function save(ImageService $images): void
@@ -36,6 +53,8 @@ class Settings extends Component
             'form.currency' => ['required', 'string', 'size:3', 'alpha'],
             'form.currency_symbol' => ['required', 'string', 'max:10'],
             'form.tax_enabled' => ['boolean'],
+            'form.payment_cod_enabled' => ['boolean'],
+            'form.payment_stripe_enabled' => ['boolean'],
             'form.tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'form.low_stock_threshold' => ['required', 'integer', 'min:0', 'max:100000'],
             'form.contact_email' => ['nullable', 'email', 'max:190'],
@@ -49,8 +68,14 @@ class Settings extends Component
             'numeric' => 'أدخل رقماً.', 'max' => 'القيمة كبيرة جداً.', 'email' => 'بريد غير صحيح.', 'image' => 'يجب أن يكون الملف صورة.',
         ]);
 
-        foreach ($this->form as $key => $value) {
-            Setting::put($key, $key === 'tax_enabled' ? ($value ? '1' : '0') : strip_tags((string) $value));
+        foreach (self::FORM_FIELDS as $key) {
+            $value = $this->form[$key];
+            Setting::put(
+                $key,
+                in_array($key, self::BOOLEAN_FIELDS, true)
+                    ? ($value ? '1' : '0')
+                    : strip_tags((string) $value),
+            );
         }
         Setting::put('currency', strtoupper($this->form['currency']));
 

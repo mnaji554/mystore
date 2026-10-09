@@ -13,6 +13,8 @@ class Role extends Model
 
     public const MANAGER = 'manager';
 
+    public const COURIER = 'courier';
+
     public const CUSTOMER = 'customer';
 
     protected $fillable = ['slug', 'name', 'permissions'];

@@ -32,7 +32,9 @@ class ShippingMethod extends Model
 
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('is_active', true)
+            ->where(fn ($query) => $query->whereNull('shipping_company_id')
+                ->orWhereHas('company', fn ($company) => $company->where('is_active', true)));
     }
 
     public function getDeliveryEstimateAttribute(): string

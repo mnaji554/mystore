@@ -61,6 +61,17 @@
 
         <div class="space-y-5">
             @can('update', $order)
+                <form wire:submit="assignCourier" class="card space-y-3 p-5">
+                    <h2 class="font-extrabold">مندوب التوصيل</h2>
+                    <select wire:model="courierId" class="input" aria-label="مندوب التوصيل">
+                        <option value="">— بدون مندوب —</option>
+                        @foreach($couriers as $courier)<option value="{{ $courier->id }}">{{ $courier->name }}</option>@endforeach
+                    </select>
+                    @error('courierId')<p class="text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
+                    <p class="text-xs text-slate-500">يُسند الطلب بعد بدء تجهيزه، ويستطيع المندوب تحديثه حتى التسليم.</p>
+                    <button class="btn-secondary w-full">حفظ الإسناد</button>
+                </form>
+
                 <div class="card space-y-3 p-5">
                     <h2 class="font-extrabold">تغيير الحالة</h2>
                     @if(count($transitions))
@@ -95,6 +106,7 @@
                 <p class="font-bold">عنوان الشحن</p>
                 <p class="text-slate-500">{{ $order->shipping_address['full_name'] ?? '' }}<br>{{ $order->address_line }}</p>
                 <p class="text-slate-500">الشحن: {{ $order->shipping_method_name }}</p>
+                @if($order->courier)<p class="text-slate-500">مندوب التوصيل: {{ $order->courier->name }}</p>@endif
                 @if($order->customer_note)<p class="rounded-lg bg-amber-50 p-2 text-xs dark:bg-amber-500/10">ملاحظة العميل: {{ $order->customer_note }}</p>@endif
             </div>
 

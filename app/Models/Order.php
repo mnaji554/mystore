@@ -21,7 +21,7 @@ class Order extends Model
         'shipping_address', 'shipping_method_id', 'shipping_method_name', 'tracking_number',
         'tracking_url', 'payment_method', 'payment_status', 'status', 'coupon_code', 'subtotal',
         'discount_total', 'coupon_discount', 'shipping_cost', 'tax_total', 'grand_total',
-        'currency', 'customer_note', 'placed_at',
+        'currency', 'customer_note', 'placed_at', 'courier_id',
     ];
 
     protected function casts(): array
@@ -77,6 +77,11 @@ class Order extends Model
     public function shippingMethod(): BelongsTo
     {
         return $this->belongsTo(ShippingMethod::class);
+    }
+
+    public function courier(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'courier_id')->withTrashed();
     }
 
     public function invoice(): HasOne

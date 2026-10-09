@@ -30,6 +30,7 @@ class Permissions
         'manager' => ['name' => 'مشرف', 'permissions' => [
             'access-admin', 'manage-products', 'manage-categories', 'manage-orders', 'manage-reviews',
         ]],
+        'courier' => ['name' => 'مندوب توصيل', 'permissions' => []],
         'customer' => ['name' => 'عميل', 'permissions' => []],
     ];
 

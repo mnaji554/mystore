@@ -30,6 +30,36 @@
     </section>
 
     <section class="card space-y-4 p-5">
+        <h2 class="font-extrabold">طرق الدفع</h2>
+        <p class="text-sm text-slate-500 dark:text-slate-400">اختر طرق الدفع التي تظهر للعملاء عند إتمام الطلب.</p>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                <input type="checkbox" wire:model="form.payment_cod_enabled" class="mt-1 rounded text-brand-600">
+                <span>
+                    <span class="block text-sm font-bold">الدفع عند الاستلام</span>
+                    <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">السماح للعملاء بالدفع نقداً عند استلام الطلب.</span>
+                </span>
+            </label>
+            <label class="flex items-start gap-3 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                <input type="checkbox" wire:model="form.payment_stripe_enabled" class="mt-1 rounded text-brand-600">
+                <span>
+                    <span class="block text-sm font-bold">البطاقات عبر Stripe</span>
+                    <span class="mt-1 block text-xs text-slate-500 dark:text-slate-400">السماح بالدفع الإلكتروني إذا كانت مفاتيح Stripe مضبوطة.</span>
+                </span>
+            </label>
+        </div>
+        <div class="space-y-1 text-xs">
+            <p class="{{ $stripeCredentialsConfigured ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400' }}">
+                {{ $stripeCredentialsConfigured ? 'مفاتيح Stripe مضبوطة.' : 'مفاتيح Stripe غير مضبوطة؛ لن يظهر الدفع بالبطاقات للعملاء.' }}
+            </p>
+            <p class="{{ $stripeWebhookConfigured ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400' }}">
+                {{ $stripeWebhookConfigured ? 'سر Webhook مضبوط.' : 'سر Webhook غير مضبوط؛ أضفه لإتمام تأكيدات الدفع عبر Stripe بشكل موثوق.' }}
+            </p>
+            <p class="text-slate-500 dark:text-slate-400">تُدار مفاتيح Stripe في إعدادات الخادم ولا تُعرض في لوحة التحكم.</p>
+        </div>
+    </section>
+
+    <section class="card space-y-4 p-5">
         <h2 class="font-extrabold">التواصل</h2>
         <div class="grid gap-4 sm:grid-cols-2">
             <x-field label="البريد الإلكتروني" model="form.contact_email" type="email" dir="ltr" />

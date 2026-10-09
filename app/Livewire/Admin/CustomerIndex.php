@@ -17,6 +17,7 @@ class CustomerIndex extends Component
     public string $search = '';
 
     #[Url]
+    #[Url]
     public string $role = 'customer';
 
     #[Url]

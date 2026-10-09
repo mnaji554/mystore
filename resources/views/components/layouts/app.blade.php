@@ -100,7 +100,7 @@
                 <livewire:cart-counter />
 
                 @auth
-                    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+                    <div class="relative z-[60]" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
                         <button class="btn-ghost !px-2" @click="open = !open" aria-haspopup="true" :aria-expanded="open">
                             <x-icon name="user" class="h-5 w-5" />
                             <span class="hidden max-w-24 truncate text-sm lg:inline">{{ auth()->user()->name }}</span>
@@ -110,9 +110,13 @@
                             @can('access-admin')
                                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-brand-700 hover:bg-slate-50 dark:text-brand-300 dark:hover:bg-slate-800"><x-icon name="chart" class="h-4 w-4" /> لوحة التحكم</a>
                             @endcan
+                            @if(auth()->user()->hasRole(\App\Models\Role::COURIER))
+                                <a href="{{ route('courier.orders') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm font-bold text-brand-700 hover:bg-slate-50 dark:text-brand-300 dark:hover:bg-slate-800"><x-icon name="truck" class="h-4 w-4" /> طلبات التوصيل</a>
+                            @else
                             <a href="{{ route('account.dashboard') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800"><x-icon name="user" class="h-4 w-4" /> حسابي</a>
                             <a href="{{ route('account.orders') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800"><x-icon name="orders" class="h-4 w-4" /> طلباتي</a>
                             <a href="{{ route('wishlist') }}" class="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-slate-800"><x-icon name="heart" class="h-4 w-4" /> المفضلة</a>
+                            @endif
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button class="flex w-full items-center gap-2 border-t border-slate-100 px-4 py-2.5 text-sm text-rose-600 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800"><x-icon name="logout" class="h-4 w-4" /> تسجيل الخروج</button>

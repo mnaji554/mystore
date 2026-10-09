@@ -2,6 +2,7 @@
 
 use App\Exceptions\StoreException;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\EnsureUserIsCourier;
 use App\Http\Middleware\EnsureUserIsStaff;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
@@ -20,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'staff' => EnsureUserIsStaff::class,
             'active' => EnsureUserIsActive::class,
+            'courier' => EnsureUserIsCourier::class,
         ]);
 
         $middleware->web(append: [

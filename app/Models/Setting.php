@@ -26,6 +26,8 @@ class Setting extends Model
         'contact_address' => 'الرياض، المملكة العربية السعودية',
         'vat_number' => '',
         'meta_description' => 'متجر إلكتروني عربي متكامل لأفضل المنتجات بأسعار مناسبة وشحن سريع.',
+        'payment_cod_enabled' => '1',
+        'payment_stripe_enabled' => '1',
     ];
 
     public static function allValues(): array

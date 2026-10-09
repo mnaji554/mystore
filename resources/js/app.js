@@ -25,13 +25,32 @@ Alpine.store('toasts', {
 // Chart.js is loaded lazily so storefront pages never download it.
 Alpine.data('chart', (config) => ({
     instance: null,
+    links: config.links ?? [],
     async init() {
         const { default: Chart } = await import('chart.js/auto');
         const dark = document.documentElement.classList.contains('dark');
         Chart.defaults.font.family = 'Tajawal, sans-serif';
         Chart.defaults.color = dark ? '#94a3b8' : '#64748b';
         Chart.defaults.borderColor = dark ? '#1e293b' : '#e2e8f0';
-        this.instance = new Chart(this.$refs.canvas, config);
+        const { links, ...chartConfig } = config;
+        this.instance = new Chart(this.$refs.canvas, {
+            ...chartConfig,
+            options: {
+                ...chartConfig.options,
+                onClick: (event, elements) => {
+                    const url = this.links[elements[0]?.index];
+
+                    if (url) {
+                        window.location.assign(url);
+                    }
+                },
+                onHover: (event, elements) => {
+                    if (event.native) {
+                        event.native.target.style.cursor = this.links[elements[0]?.index] ? 'pointer' : 'default';
+                    }
+                },
+            },
+        });
     },
     destroy() {
         this.instance?.destroy();

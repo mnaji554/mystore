@@ -6,11 +6,13 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\PaymentException;
 use App\Models\Order;
+use App\Models\Setting;
 use App\Services\CartService;
 use App\Services\OrderService;
 use App\Services\Payments\StripeGateway;
 use App\Services\PaymentService;
 use Illuminate\Support\Facades\Schema;
+use Stripe\StripeClient;
 use Tests\Support\FakeGateway;
 use Tests\TestCase;
 
@@ -34,8 +36,9 @@ class PaymentTest extends TestCase
         return app(OrderService::class)->createFromCart($cart, $this->checkoutData($this->shipping(['price' => 0]), $gateway), $user);
     }
 
-    public function test_cash_on_delivery_is_always_available_and_stripe_only_when_configured(): void
+    public function test_payment_methods_are_available_only_when_enabled_and_stripe_is_configured(): void
     {
+        config(['services.stripe.key' => null, 'services.stripe.secret' => null]);
         $payments = app(PaymentService::class);
 
         $this->assertTrue($payments->available()->has('cod'));
@@ -43,10 +46,20 @@ class PaymentTest extends TestCase
 
         config(['services.stripe.key' => 'pk_test_x', 'services.stripe.secret' => 'sk_test_x']);
         $this->assertTrue(app(PaymentService::class)->available()->has('stripe'));
+
+        Setting::put('payment_cod_enabled', '0');
+        Setting::put('payment_stripe_enabled', '0');
+
+        $available = app(PaymentService::class)->available();
+        $this->assertFalse($available->has('cod'));
+        $this->assertFalse($available->has('stripe'));
+        $this->assertInstanceOf(StripeClient::class, app(StripeGateway::class)->client());
     }
 
     public function test_unavailable_gateway_cannot_be_used_for_an_order(): void
     {
+        config(['services.stripe.key' => null, 'services.stripe.secret' => null]);
+
         $this->expectException(PaymentException::class);
         $this->order('stripe');
     }

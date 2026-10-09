@@ -9,12 +9,14 @@ use App\Models\Coupon;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Setting;
 use App\Models\ShippingCompany;
 use App\Models\ShippingMethod;
 use App\Models\User;
 use App\Services\CartService;
 use App\Services\InvoiceService;
 use App\Services\OrderService;
+use App\Services\PaymentService;
 use App\Services\ReportService;
 use App\Services\ShippingService;
 use Illuminate\Http\UploadedFile;
@@ -49,6 +51,25 @@ class AdminTest extends TestCase
         $this->assertSame(1, $stats['new_orders']);
         $this->assertGreaterThanOrEqual(1, $stats['low_stock_count']);
         $this->assertEquals((float) $order->grand_total, $stats['avg_order_value']);
+    }
+
+    public function test_dashboard_metrics_link_to_matching_admin_sections_and_filters(): void
+    {
+        $this->actingAs($this->staff('admin'));
+
+        $component = Livewire::test(Admin\Dashboard::class);
+
+        $component->assertSee('href="'.e(route('admin.orders.index', [
+            'from' => today()->toDateString(),
+            'to' => today()->toDateString(),
+        ])).'"', false);
+        $component->assertSee('href="'.e(route('admin.orders.index', [
+            'status' => \App\Enums\OrderStatus::Pending->value,
+        ])).'"', false);
+        $component->assertSee('href="'.e(route('admin.customers.index', [
+            'role' => \App\Models\Role::CUSTOMER,
+        ])).'"', false);
+        $component->assertSee('href="'.e(route('admin.products.index', ['stock' => 'low'])).'"', false);
     }
 
     public function test_charts_data_reflect_orders(): void
@@ -357,5 +378,40 @@ class AdminTest extends TestCase
         $this->assertSame(5.0, app(CartService::class)->tax(100.0));
 
         Livewire::test(Admin\Settings::class)->set('form.tax_rate', '500')->call('save')->assertHasErrors('form.tax_rate');
+    }
+
+    public function test_admin_can_manage_payment_methods_without_saving_unlisted_settings(): void
+    {
+        config(['services.stripe.key' => 'pk_test_x', 'services.stripe.secret' => 'sk_test_x']);
+        $this->actingAs($this->staff('admin'));
+
+        Livewire::test(Admin\Settings::class)
+            ->set('form.payment_cod_enabled', false)
+            ->set('form.payment_stripe_enabled', true)
+            ->set('form.unlisted_setting', 'unexpected')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertSee('طرق الدفع')
+            ->assertDontSee('sk_test_x');
+
+        $this->assertDatabaseHas('store_settings', ['key' => 'payment_cod_enabled', 'value' => '0']);
+        $this->assertDatabaseHas('store_settings', ['key' => 'payment_stripe_enabled', 'value' => '1']);
+        $this->assertNull(Setting::get('unlisted_setting'));
+
+        $available = app(PaymentService::class)->available();
+        $this->assertFalse($available->has('cod'));
+        $this->assertTrue($available->has('stripe'));
+    }
+
+    public function test_payment_method_toggles_reject_non_boolean_values(): void
+    {
+        $this->actingAs($this->staff('admin'));
+
+        Livewire::test(Admin\Settings::class)
+            ->set('form.payment_cod_enabled', 'enabled')
+            ->call('save')
+            ->assertHasErrors('form.payment_cod_enabled');
+
+        $this->assertDatabaseMissing('store_settings', ['key' => 'payment_cod_enabled']);
     }
 }

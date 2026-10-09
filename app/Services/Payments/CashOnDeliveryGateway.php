@@ -5,6 +5,7 @@ namespace App\Services\Payments;
 use App\Contracts\PaymentGateway;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Support\PaymentResult;
 
 class CashOnDeliveryGateway implements PaymentGateway
@@ -26,7 +27,7 @@ class CashOnDeliveryGateway implements PaymentGateway
 
     public function isAvailable(): bool
     {
-        return true;
+        return filter_var(Setting::get('payment_cod_enabled', '1'), FILTER_VALIDATE_BOOLEAN);
     }
 
     public function initiate(Order $order, Payment $payment): PaymentResult

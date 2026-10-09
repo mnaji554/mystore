@@ -29,7 +29,12 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended($request->user()->isStaff() ? route('admin.dashboard') : route('account.dashboard'));
+        $user = $request->user();
+        $destination = $user->hasRole(Role::COURIER)
+            ? route('courier.orders')
+            : ($user->isStaff() ? route('admin.dashboard') : route('account.dashboard'));
+
+        return redirect()->intended($destination);
     }
 
     public function showRegister()

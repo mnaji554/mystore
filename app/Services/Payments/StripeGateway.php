@@ -6,6 +6,7 @@ use App\Contracts\PaymentGateway;
 use App\Exceptions\PaymentException;
 use App\Models\Order;
 use App\Models\Payment;
+use App\Models\Setting;
 use App\Support\PaymentResult;
 use Stripe\Event;
 use Stripe\StripeClient;
@@ -30,16 +31,22 @@ class StripeGateway implements PaymentGateway
 
     public function isAvailable(): bool
     {
-        return filled(config('services.stripe.secret')) && filled(config('services.stripe.key'));
+        return $this->isConfigured()
+            && filter_var(Setting::get('payment_stripe_enabled', '1'), FILTER_VALIDATE_BOOLEAN);
     }
 
     public function client(): StripeClient
     {
-        if (! $this->isAvailable()) {
+        if (! $this->isConfigured()) {
             throw new PaymentException('بوابة الدفع غير مفعّلة.');
         }
 
         return new StripeClient(config('services.stripe.secret'));
+    }
+
+    private function isConfigured(): bool
+    {
+        return filled(config('services.stripe.secret')) && filled(config('services.stripe.key'));
     }
 
     public function initiate(Order $order, Payment $payment): PaymentResult

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\Admin\CourierDocumentController;
 use App\Http\Controllers\AdminInvoiceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CheckoutResultController;
@@ -12,6 +13,7 @@ use App\Livewire\Account;
 use App\Livewire\Admin;
 use App\Livewire\CartPage;
 use App\Livewire\Checkout;
+use App\Livewire\Courier\Orders as CourierOrders;
 use App\Livewire\Home;
 use App\Livewire\ProductListing;
 use App\Livewire\ProductShow;
@@ -82,6 +84,8 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
+    Route::get('/courier/orders', CourierOrders::class)->middleware('courier')->name('courier.orders');
+
     Route::get('/wishlist', WishlistPage::class)->name('wishlist');
 
     Route::prefix('account')->name('account.')->group(function () {
@@ -118,6 +122,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     Route::get('/customers/{user}', Admin\CustomerShow::class)->name('customers.show')->withTrashed();
     Route::get('/coupons', Admin\Coupons::class)->name('coupons');
     Route::get('/shipping', Admin\Shipping::class)->name('shipping');
+    Route::get('/couriers/{user}/documents/{document}', CourierDocumentController::class)
+        ->whereIn('document', ['national-id', 'vehicle-registration', 'driving-license'])
+        ->name('couriers.documents.download');
     Route::get('/reviews', Admin\Reviews::class)->name('reviews');
     Route::get('/messages', Admin\Messages::class)->name('messages');
     Route::get('/settings', Admin\Settings::class)->name('settings');
