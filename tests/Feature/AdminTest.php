@@ -46,6 +46,14 @@ class AdminTest extends TestCase
         $component = Livewire::test(Admin\Dashboard::class);
         $component->assertSee('إجمالي المبيعات')->assertSee('منتج قليل')->assertSee($order->order_number);
 
+        $this->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('sidebarCollapsed = !sidebarCollapsed', false)
+            ->assertSee('--admin-sidebar-width', false)
+            ->assertSee('group-hover:opacity-100', false)
+            ->assertSee('x-show="sidebarCollapsed"', false)
+            ->assertSee('role="tooltip"', false);
+
         $stats = app(ReportService::class)->summary();
         $this->assertEquals((float) $order->grand_total, $stats['total_sales']);
         $this->assertSame(1, $stats['orders_count']);

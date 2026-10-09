@@ -31,14 +31,16 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body x-data="{ sidebar: false }"
-      x-init="@if(session('success')) $store.toasts.add(@js(session('success')), 'success'); @endif
+<body x-data="{ sidebar: false, sidebarCollapsed: localStorage.getItem('admin.sidebar.collapsed') === 'true' }"
+      x-init="$watch('sidebarCollapsed', value => localStorage.setItem('admin.sidebar.collapsed', value));
+              @if(session('success')) $store.toasts.add(@js(session('success')), 'success'); @endif
               @if(session('error')) $store.toasts.add(@js(session('error')), 'error'); @endif">
     <div class="flex min-h-screen">
-        <aside class="fixed inset-y-0 start-0 z-50 w-64 transform border-e border-slate-200 bg-white transition dark:border-slate-800 dark:bg-slate-900 lg:static lg:translate-x-0 max-lg:rtl:translate-x-full max-lg:ltr:-translate-x-full"
+        <aside class="fixed inset-y-0 start-0 z-50 w-64 transform border-e border-slate-200 bg-white transition-[width,transform] duration-200 dark:border-slate-800 dark:bg-slate-900 lg:static lg:w-[var(--admin-sidebar-width)] lg:translate-x-0 max-lg:rtl:translate-x-full max-lg:ltr:-translate-x-full"
+               :style="`--admin-sidebar-width: ${sidebarCollapsed ? '5rem' : '16rem'}`"
                :class="sidebar ? 'max-lg:translate-x-0!' : ''">
-            <div class="flex h-16 items-center justify-between border-b border-slate-200 px-5 dark:border-slate-800">
-                <a href="{{ route('admin.dashboard') }}" class="text-lg font-extrabold text-brand-700 dark:text-brand-400">{{ setting('store_name') }}</a>
+            <div class="flex h-16 items-center justify-between border-b border-slate-200 px-5 dark:border-slate-800" :class="sidebarCollapsed ? 'lg:justify-center lg:px-0' : ''">
+                <a href="{{ route('admin.dashboard') }}" x-show="!sidebarCollapsed" x-cloak class="overflow-hidden whitespace-nowrap text-lg font-extrabold text-brand-700 dark:text-brand-400">{{ setting('store_name') }}</a>
                 <button class="lg:hidden" @click="sidebar = false" aria-label="إغلاق"><x-icon name="close" /></button>
             </div>
             <nav class="space-y-1 p-3">
@@ -46,8 +48,14 @@
                     @can($perm)
                         @php $active = request()->routeIs($route) || (str_ends_with($route, '.index') && request()->routeIs(\Illuminate\Support\Str::beforeLast($route, '.index').'.*')); @endphp
                         <a href="{{ route($route) }}"
-                           class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition {{ $active ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' }}">
-                            <x-icon :name="$icon" class="h-5 w-5" /> {{ $label }}
+                           aria-label="{{ $label }}"
+                           title="{{ $label }}"
+                           class="group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition {{ $active ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800' }}"
+                           :class="sidebarCollapsed ? 'lg:justify-center lg:px-2' : ''">
+                            <x-icon :name="$icon" class="h-5 w-5 shrink-0" />
+                            <span x-show="!sidebarCollapsed" x-cloak class="whitespace-nowrap">{{ $label }}</span>
+                            <span x-show="sidebarCollapsed" x-cloak role="tooltip"
+                                  class="pointer-events-none absolute end-full top-1/2 z-[60] me-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-slate-700">{{ $label }}</span>
                         </a>
                     @endcan
                 @endforeach
@@ -57,7 +65,13 @@
 
         <div class="flex min-w-0 flex-1 flex-col">
             <header class="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-slate-200 bg-white/90 px-4 backdrop-blur dark:border-slate-800 dark:bg-slate-900/90 sm:px-6">
-                <button class="btn-ghost !p-2 lg:hidden" @click="sidebar = true" aria-label="القائمة"><x-icon name="menu" class="h-6 w-6" /></button>
+                <button class="btn-ghost !p-2 lg:hidden" @click="sidebar = true; sidebarCollapsed = false" aria-label="القائمة"><x-icon name="menu" class="h-6 w-6" /></button>
+                <button type="button" class="btn-ghost !p-2 max-lg:hidden" @click="sidebarCollapsed = !sidebarCollapsed"
+                        :aria-label="sidebarCollapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'"
+                        :title="sidebarCollapsed ? 'توسيع القائمة الجانبية' : 'طي القائمة الجانبية'">
+                    <x-icon name="chevron-left" class="h-5 w-5" x-show="!sidebarCollapsed" />
+                    <x-icon name="chevron-right" class="h-5 w-5" x-show="sidebarCollapsed" x-cloak />
+                </button>
                 <h1 class="text-lg font-extrabold">{{ $title }}</h1>
                 <div class="ms-auto flex items-center gap-1">
                     <a href="{{ route('home') }}" target="_blank" class="btn-ghost btn-sm">عرض المتجر</a>
