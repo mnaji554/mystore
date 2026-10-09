@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Admin;
 
-use App\Models\Order;
 use App\Enums\OrderStatus;
+use App\Models\Order;
 use App\Services\ReportService;
 use Livewire\Component;
 
@@ -56,7 +56,9 @@ class Dashboard extends Component
                 ? route('admin.products.edit', $product->product_id)
                 : route('admin.products.index'))->all(),
             'topCategories' => $topCategories,
-            'topCategoryLinks' => $topCategories['rows']->map(fn ($category) => route('admin.categories'))->all(),
+            'topCategoryLinks' => $topCategories['rows']->map(fn ($category) => route('admin.categories', [
+                'edit' => $category->category_id,
+            ]))->all(),
             'lowStock' => $reports->lowStockQuery()->with('variants:id,product_id,stock,is_active,sku')->orderBy('stock')->limit(8)->get(),
             'recentOrders' => Order::query()->with('user:id,name')->latest('id')->limit(8)->get(),
             'threshold' => $reports->lowStockThreshold(),

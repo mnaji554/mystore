@@ -9,6 +9,7 @@ use App\Models\Coupon;
 use App\Models\Invoice;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Role;
 use App\Models\Setting;
 use App\Models\ShippingCompany;
 use App\Models\ShippingMethod;
@@ -64,12 +65,23 @@ class AdminTest extends TestCase
             'to' => today()->toDateString(),
         ])).'"', false);
         $component->assertSee('href="'.e(route('admin.orders.index', [
-            'status' => \App\Enums\OrderStatus::Pending->value,
+            'status' => OrderStatus::Pending->value,
         ])).'"', false);
         $component->assertSee('href="'.e(route('admin.customers.index', [
-            'role' => \App\Models\Role::CUSTOMER,
+            'role' => Role::CUSTOMER,
         ])).'"', false);
         $component->assertSee('href="'.e(route('admin.products.index', ['stock' => 'low'])).'"', false);
+    }
+
+    public function test_category_chart_target_opens_the_matching_category_for_editing(): void
+    {
+        $category = $this->category(['name_ar' => 'تصنيف مرتبط']);
+        $this->actingAs($this->staff('admin'));
+
+        $this->get(route('admin.categories', ['edit' => $category->id]))
+            ->assertOk()
+            ->assertSee('تعديل التصنيف')
+            ->assertSee('تصنيف مرتبط');
     }
 
     public function test_charts_data_reflect_orders(): void

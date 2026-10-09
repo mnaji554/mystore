@@ -8,6 +8,7 @@ use App\Services\ImageService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
@@ -19,6 +20,9 @@ class Categories extends Component
 
     public ?int $editingId = null;
 
+    #[Url(as: 'edit')]
+    public ?int $categoryToEdit = null;
+
     public array $form = [];
 
     public $image = null;
@@ -28,7 +32,12 @@ class Categories extends Component
     public function mount(): void
     {
         $this->authorize('viewAny', Category::class);
+        $categoryToEdit = $this->categoryToEdit;
         $this->resetForm();
+
+        if ($categoryToEdit) {
+            $this->edit($categoryToEdit);
+        }
     }
 
     public function resetForm(): void
@@ -38,6 +47,7 @@ class Categories extends Component
             'sort_order' => 0, 'is_active' => true, 'seo_title' => '', 'seo_description' => '', 'seo_keywords' => '',
         ];
         $this->editingId = null;
+        $this->categoryToEdit = null;
         $this->image = null;
         $this->currentImage = null;
         $this->showForm = false;
@@ -63,6 +73,7 @@ class Categories extends Component
         }
         $this->form['parent_id'] = (string) ($category->parent_id ?? '');
         $this->editingId = $id;
+        $this->categoryToEdit = $id;
         $this->currentImage = $category->image;
         $this->showForm = true;
     }
