@@ -10,6 +10,7 @@ use App\Livewire\WishlistPage;
 use App\Models\Cart;
 use App\Models\ContactMessage;
 use App\Models\Coupon;
+use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\ContactMessageNotification;
 use App\Notifications\LowStockNotification;
@@ -34,6 +35,29 @@ class StorefrontTest extends TestCase
         }
 
         $this->get('/')->assertSee('dir="rtl"', false)->assertSee('lang="ar"', false);
+    }
+
+    public function test_homepage_image_urls_use_the_live_request_host_instead_of_app_url(): void
+    {
+        config(['filesystems.disks.public.url' => 'http://localhost:8000/storage']);
+
+        $category = $this->category(['image' => 'categories/electronics.webp']);
+        $product = $this->product(['category_id' => $category->id]);
+        $product->images()->create([
+            'path' => 'products/'.$product->id.'/phone.webp',
+            'thumb_path' => 'products/'.$product->id.'/thumbs/phone.webp',
+            'alt' => $product->name_ar,
+            'sort_order' => 1,
+            'is_primary' => true,
+        ]);
+        Setting::put('logo', 'branding/logo.webp');
+
+        $this->get('https://mystore.protck.com/')
+            ->assertOk()
+            ->assertSee('https://mystore.protck.com/storage/products/'.$product->id.'/thumbs/phone.webp', false)
+            ->assertSee('https://mystore.protck.com/storage/categories/electronics.webp', false)
+            ->assertSee('https://mystore.protck.com/storage/branding/logo.webp', false)
+            ->assertDontSee('localhost:8000/storage', false);
     }
 
     public function test_search_pages_are_noindexed_and_have_canonical_urls(): void

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Storage;
 
 class Setting extends Model
 {
@@ -58,6 +57,6 @@ class Setting extends Model
     {
         $logo = self::get('logo');
 
-        return $logo ? Storage::disk('public')->url($logo) : null;
+        return $logo ? asset('storage/'.$logo) : null;
     }
 }
