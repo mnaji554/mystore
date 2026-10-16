@@ -137,7 +137,7 @@
                 <div wire:loading wire:target="uploads" class="text-sm font-bold text-brand-600">جارٍ رفع الصور…</div>
                 @error('uploads')<p class="text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
                 @error('uploads.*')<p class="text-xs font-bold text-rose-600">{{ $message }}</p>@enderror
-                @if(! $productId)<p class="text-xs text-slate-500">ستُحفظ الصور مع المنتج، وأول صورة تصبح الرئيسية.</p>@endif
+                <p class="text-xs text-slate-500">أول صورة ترفعها تصبح الصورة الرئيسية، وتبقى الصور السابقة ضمن المعرض.</p>
             </section>
         </div>
     </div>

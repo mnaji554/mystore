@@ -194,6 +194,32 @@ class AdminTest extends TestCase
         $this->assertCount(1, $product->images()->get());
     }
 
+    public function test_uploaded_image_becomes_primary_when_editing_a_product(): void
+    {
+        Storage::fake('public');
+        $product = $this->product();
+        Storage::disk('public')->put('products/'.$product->id.'/old.webp', 'old image');
+        $oldImage = $product->images()->create([
+            'path' => 'products/'.$product->id.'/old.webp',
+            'thumb_path' => 'products/'.$product->id.'/old.webp',
+            'alt' => $product->name_ar,
+            'sort_order' => 1,
+            'is_primary' => true,
+        ]);
+        $this->actingAs($this->staff('admin'));
+
+        Livewire::test(Admin\ProductForm::class, ['product' => $product])
+            ->set('uploads', [UploadedFile::fake()->image('replacement.jpg')])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $newImage = $product->images()->where('is_primary', true)->firstOrFail();
+        $this->assertNotSame($oldImage->id, $newImage->id);
+        $this->assertFalse($oldImage->fresh()->is_primary);
+        Storage::disk('public')->assertExists($newImage->path);
+        $this->get($product->fresh()->url)->assertOk()->assertSee($newImage->url, false);
+    }
+
     public function test_product_list_search_filter_sort_and_bulk_delete(): void
     {
         $category = $this->category();

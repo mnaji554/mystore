@@ -256,10 +256,13 @@ class ProductForm extends Component
 
                 $this->syncVariants($product);
 
-                $hasPrimary = $product->images()->where('is_primary', true)->exists();
+                if ($this->uploads !== []) {
+                    $product->images()->where('is_primary', true)->update(['is_primary' => false]);
+                }
+
                 $order = (int) $product->images()->max('sort_order');
 
-                foreach ($this->uploads as $upload) {
+                foreach ($this->uploads as $index => $upload) {
                     $paths = $images->store($upload, "products/{$product->id}");
                     $stored[] = $paths;
 
@@ -268,9 +271,8 @@ class ProductForm extends Component
                         'thumb_path' => $paths['thumb_path'],
                         'alt' => $product->name_ar,
                         'sort_order' => ++$order,
-                        'is_primary' => ! $hasPrimary,
+                        'is_primary' => $index === 0,
                     ]);
-                    $hasPrimary = true;
                 }
 
                 return $product;
