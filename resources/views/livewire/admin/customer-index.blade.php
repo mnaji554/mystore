@@ -2,9 +2,17 @@
     <div class="card flex flex-wrap items-end gap-3 p-4">
         <div class="min-w-48 flex-1"><label class="label" for="s">بحث</label><input id="s" type="search" wire:model.live.debounce.400ms="search" class="input" placeholder="الاسم أو البريد أو الجوال"></div>
         <div><label class="label" for="r">الدور</label>
-            <select id="r" wire:model.live="role" class="input !w-auto"><option value="">كل المستخدمين</option>@foreach($roles as $r)<option value="{{ $r->slug }}">{{ $r->name }}</option>@endforeach</select></div>
+            <div class="relative">
+                <select id="r" wire:model.live="role" class="input !w-auto appearance-none pe-9"><option value="">كل المستخدمين</option>@foreach($roles as $r)<option value="{{ $r->slug }}">{{ $r->name }}</option>@endforeach</select>
+                <x-icon name="chevron-down" class="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            </div>
+        </div>
         <div><label class="label" for="st">الحالة</label>
-            <select id="st" wire:model.live="state" class="input !w-auto"><option value="">الكل</option><option value="active">مفعّل</option><option value="disabled">معطّل</option></select></div>
+            <div class="relative">
+                <select id="st" wire:model.live="state" class="input !w-auto appearance-none pe-9"><option value="">الكل</option><option value="active">مفعّل</option><option value="disabled">معطّل</option></select>
+                <x-icon name="chevron-down" class="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            </div>
+        </div>
         @if($canCreateUsers)<a href="{{ route('admin.users.create') }}" class="btn-primary"><x-icon name="plus" class="h-4 w-4" /> إضافة مستخدم</a>@endif
     </div>
 
