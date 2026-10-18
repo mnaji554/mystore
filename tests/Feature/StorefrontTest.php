@@ -168,6 +168,27 @@ class StorefrontTest extends TestCase
         $service->store($fake, 'products/1');
     }
 
+    public function test_public_storage_images_are_served_from_the_public_disk(): void
+    {
+        Storage::fake('public');
+        $path = 'products/1/photo.webp';
+        $contents = 'public image bytes';
+        Storage::disk('public')->put($path, $contents);
+
+        $this->get('/storage/'.$path)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/webp')
+            ->assertStreamedContent($contents);
+    }
+
+    public function test_private_local_storage_files_require_a_signed_url(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('documents/private.pdf', 'private document');
+
+        $this->get('/private-storage/documents/private.pdf')->assertForbidden();
+    }
+
     public function test_responses_include_security_headers(): void
     {
         $this->get('/')->assertHeader('X-Content-Type-Options', 'nosniff')->assertHeader('X-Frame-Options', 'SAMEORIGIN');
