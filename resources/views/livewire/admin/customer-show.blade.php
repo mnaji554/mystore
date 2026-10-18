@@ -1,5 +1,5 @@
 <div class="space-y-5">
-    <a href="{{ route('admin.customers.index') }}" class="btn-ghost btn-sm"><x-icon name="chevron-right" class="h-4 w-4" /> العملاء</a>
+    <a href="{{ route('admin.users.index') }}" class="btn-ghost btn-sm"><x-icon name="chevron-right" class="h-4 w-4" /> المستخدمون</a>
 
     <div class="flex items-center gap-3">
         <span class="grid h-12 w-12 place-items-center rounded-full bg-brand-600 text-xl font-extrabold text-white">{{ mb_substr($user->name, 0, 1) }}</span>
@@ -34,7 +34,7 @@
         </form>
 
         <div class="card overflow-x-auto lg:col-span-2">
-            <div class="border-b border-slate-100 p-4 font-extrabold dark:border-slate-800">طلبات العميل</div>
+            <div class="border-b border-slate-100 p-4 font-extrabold dark:border-slate-800">الطلبات المرتبطة بالحساب</div>
             <table class="w-full">
                 <thead><tr><th class="table-th">الطلب</th><th class="table-th">التاريخ</th><th class="table-th">الحالة</th><th class="table-th">الإجمالي</th></tr></thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">

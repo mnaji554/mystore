@@ -16,12 +16,12 @@ class PermissionsTest extends TestCase
 {
     public function test_guests_are_sent_to_login_and_customers_are_forbidden_from_admin(): void
     {
-        foreach (['/admin', '/admin/products', '/admin/orders', '/admin/settings', '/admin/customers'] as $url) {
+        foreach (['/admin', '/admin/products', '/admin/orders', '/admin/settings', '/admin/customers', '/admin/users', '/admin/roles'] as $url) {
             $this->get($url)->assertRedirect(route('login'));
         }
 
         $this->actingAs($this->customer());
-        foreach (['/admin', '/admin/products', '/admin/orders', '/admin/settings', '/admin/customers', '/admin/categories'] as $url) {
+        foreach (['/admin', '/admin/products', '/admin/orders', '/admin/settings', '/admin/customers', '/admin/users', '/admin/roles', '/admin/categories'] as $url) {
             $this->get($url)->assertForbidden();
         }
     }
@@ -59,6 +59,8 @@ class PermissionsTest extends TestCase
         $this->get('/admin/reviews')->assertOk();
         $this->get('/admin/settings')->assertForbidden();
         $this->get('/admin/customers')->assertForbidden();
+        $this->get('/admin/users')->assertForbidden();
+        $this->get('/admin/roles')->assertForbidden();
         $this->get('/admin/coupons')->assertForbidden();
         $this->get('/admin/shipping')->assertForbidden();
     }
@@ -71,10 +73,14 @@ class PermissionsTest extends TestCase
             $this->actingAs($this->staff($role));
 
             foreach (['/admin', '/admin/products', '/admin/products/create', '/admin/categories', '/admin/orders', '/admin/customers',
-                '/admin/customers/'.$customer->id, '/admin/coupons', '/admin/shipping', '/admin/reviews', '/admin/messages', '/admin/settings', '/admin/notifications'] as $url) {
+                '/admin/customers/'.$customer->id, '/admin/users', '/admin/users/create', '/admin/users/'.$customer->id,
+                '/admin/coupons', '/admin/shipping', '/admin/reviews', '/admin/messages', '/admin/settings', '/admin/notifications'] as $url) {
                 $this->get($url)->assertOk();
             }
         }
+
+        $this->actingAs($this->staff('admin'))->get('/admin/roles')->assertForbidden();
+        $this->actingAs($this->staff('super_admin'))->get('/admin/roles')->assertOk();
     }
 
     public function test_livewire_admin_actions_are_authorized_not_just_routes(): void
@@ -106,7 +112,7 @@ class PermissionsTest extends TestCase
         $this->assertFalse(Gate::forUser($super)->allows('assignRole', $super));
 
         Livewire::actingAs($admin)->test(Admin\CustomerShow::class, ['user' => $target])
-            ->set('roleSlug', Role::ADMIN)->call('save');
+            ->set('roleSlug', Role::ADMIN)->call('save')->assertForbidden();
         $this->assertSame(Role::CUSTOMER, $target->fresh()->role->slug);
 
         Livewire::actingAs($super)->test(Admin\CustomerShow::class, ['user' => $target])
@@ -123,6 +129,17 @@ class PermissionsTest extends TestCase
         $this->assertFalse(Gate::forUser($admin)->allows('delete', $super));
         $this->assertFalse(Gate::forUser($admin)->allows('delete', $admin));
         $this->assertTrue(Gate::forUser($admin)->allows('delete', $this->customer()));
+    }
+
+    public function test_customer_managers_cannot_view_or_change_staff_accounts(): void
+    {
+        $admin = $this->staff('admin');
+        $manager = $this->staff('manager');
+        $this->actingAs($admin);
+
+        $this->get('/admin/users/'.$manager->id)->assertForbidden();
+        $this->assertFalse(Gate::forUser($admin)->allows('update', $manager));
+        $this->assertFalse(Gate::forUser($admin)->allows('delete', $manager));
     }
 
     public function test_addresses_belong_to_their_owner(): void

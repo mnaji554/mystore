@@ -17,7 +17,7 @@ class CustomerIndex extends Component
     public string $search = '';
 
     #[Url]
-    public string $role = 'customer';
+    public string $role = '';
 
     #[Url]
     public string $state = '';
@@ -60,6 +60,7 @@ class CustomerIndex extends Component
             ->withCount('orders')
             ->withSum(['orders as total_spent' => fn ($q) => $q->whereIn('status', OrderStatus::revenueStatuses())], 'grand_total')
             ->withMax('orders as last_order_at', 'created_at')
+            ->when(! auth()->user()->can('manage-staff'), fn ($q) => $q->whereHas('role', fn ($r) => $r->where('slug', Role::CUSTOMER)))
             ->when($this->search !== '', function ($q) {
                 $like = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $this->search).'%';
                 $q->where(fn ($w) => $w->where('name', 'like', $like)->orWhere('email', 'like', $like)->orWhere('phone', 'like', $like));
@@ -71,7 +72,11 @@ class CustomerIndex extends Component
 
         return view('livewire.admin.customer-index', [
             'users' => $users,
-            'roles' => Role::orderBy('id')->get(['slug', 'name']),
-        ])->layout('components.layouts.admin', ['title' => 'العملاء']);
+            'roles' => Role::query()
+                ->when(! auth()->user()->can('manage-staff'), fn ($q) => $q->where('slug', Role::CUSTOMER))
+                ->orderBy('id')
+                ->get(['slug', 'name']),
+            'canCreateUsers' => auth()->user()->can('create', User::class),
+        ])->layout('components.layouts.admin', ['title' => 'المستخدمون']);
     }
 }

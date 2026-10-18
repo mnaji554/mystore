@@ -6,7 +6,8 @@
         ['admin.products.index', 'المنتجات', 'cube', 'manage-products'],
         ['admin.categories', 'التصنيفات', 'grid', 'manage-categories'],
         ['admin.orders.index', 'الطلبات', 'orders', 'manage-orders'],
-        ['admin.customers.index', 'العملاء', 'users', 'manage-customers'],
+        ['admin.users.index', 'المستخدمون', 'users', null],
+        ['admin.roles', 'الأدوار والصلاحيات', 'shield', 'manage-staff'],
         ['admin.coupons', 'الكوبونات', 'ticket', 'manage-coupons'],
         ['admin.shipping', 'الشحن', 'truck', 'manage-shipping'],
         ['admin.reviews', 'التقييمات', 'star', 'manage-reviews'],
@@ -45,7 +46,7 @@
             </div>
             <nav class="space-y-1 p-3">
                 @foreach($nav as [$route, $label, $icon, $perm])
-                    @can($perm)
+                    @if($perm === null ? auth()->user()->can('manage-customers') || auth()->user()->can('manage-staff') : auth()->user()->can($perm))
                         @php $active = request()->routeIs($route) || (str_ends_with($route, '.index') && request()->routeIs(\Illuminate\Support\Str::beforeLast($route, '.index').'.*')); @endphp
                         <a href="{{ route($route) }}"
                            aria-label="{{ $label }}"
@@ -57,7 +58,7 @@
                             <span x-show="sidebarCollapsed" x-cloak role="tooltip"
                                   class="pointer-events-none absolute end-full top-1/2 z-[60] me-2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 dark:bg-slate-700">{{ $label }}</span>
                         </a>
-                    @endcan
+                    @endif
                 @endforeach
             </nav>
         </aside>

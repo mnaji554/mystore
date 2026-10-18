@@ -120,6 +120,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'staff'])->group(fun
     Route::get('/orders/{order}/invoice.pdf', [AdminInvoiceController::class, 'pdf'])->name('orders.invoice.pdf');
     Route::get('/customers', Admin\CustomerIndex::class)->name('customers.index');
     Route::get('/customers/{user}', Admin\CustomerShow::class)->name('customers.show')->withTrashed();
+    Route::get('/users', Admin\CustomerIndex::class)->name('users.index');
+    Route::get('/users/create', Admin\UserCreate::class)->name('users.create');
+    Route::get('/users/{user}', Admin\CustomerShow::class)->name('users.show')->withTrashed();
+    Route::get('/roles', Admin\Roles::class)->name('roles');
     Route::get('/coupons', Admin\Coupons::class)->name('coupons');
     Route::get('/shipping', Admin\Shipping::class)->name('shipping');
     Route::get('/couriers/{user}/documents/{document}', CourierDocumentController::class)

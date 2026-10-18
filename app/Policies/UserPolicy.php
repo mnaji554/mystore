@@ -8,12 +8,20 @@ class UserPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasPermission('manage-customers');
+        return $user->hasPermission('manage-customers') || $user->hasPermission('manage-staff');
     }
 
     public function view(User $user, User $target): bool
     {
-        return $user->id === $target->id || $user->hasPermission('manage-customers');
+        return $user->id === $target->id
+            || ($target->isStaff()
+                ? $user->hasPermission('manage-staff')
+                : $user->hasPermission('manage-customers'));
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->hasPermission('manage-customers') || $user->hasPermission('manage-staff');
     }
 
     public function update(User $user, User $target): bool
@@ -22,19 +30,25 @@ class UserPolicy
             return false;
         }
 
-        return $user->hasPermission('manage-customers');
+        return $target->isStaff()
+            ? $user->hasPermission('manage-staff')
+            : $user->hasPermission('manage-customers');
     }
 
     public function delete(User $user, User $target): bool
     {
         return $user->id !== $target->id
             && ! $target->isSuperAdmin()
-            && $user->hasPermission('manage-customers')
+            && ($target->isStaff()
+                ? $user->hasPermission('manage-staff')
+                : $user->hasPermission('manage-customers'))
             && $user->hasPermission('delete-records');
     }
 
     public function assignRole(User $user, User $target): bool
     {
-        return $user->hasPermission('manage-staff') && $user->id !== $target->id;
+        return $user->hasPermission('manage-staff')
+            && $user->id !== $target->id
+            && (! $target->isSuperAdmin() || $user->isSuperAdmin());
     }
 }

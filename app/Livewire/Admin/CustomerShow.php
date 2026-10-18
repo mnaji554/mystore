@@ -31,7 +31,6 @@ class CustomerShow extends Component
     public function mount(User $user): void
     {
         $this->authorize('view', $user);
-        abort_unless(auth()->user()->can('manage-customers'), 403);
 
         $this->userId = $user->id;
         $this->name = $user->name;
@@ -51,11 +50,16 @@ class CustomerShow extends Component
         $user = $this->user();
         $this->authorize('update', $user);
 
+        if ($this->roleSlug !== $user->role?->slug) {
+            $this->authorize('assignRole', $user);
+        }
+
         $this->validate([
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email:rfc', 'max:190', Rule::unique('users', 'email')->ignore($user->id)],
             'phone' => ['nullable', 'string', 'regex:/^[0-9+\-\s()]{7,20}$/'],
             'newPassword' => ['nullable', 'string', 'min:8', 'max:100'],
+            'roleSlug' => ['required', 'string', Rule::exists('roles', 'slug')],
         ], [
             'name.required' => 'الاسم مطلوب.', 'email.required' => 'البريد مطلوب.', 'email.email' => 'صيغة البريد غير صحيحة.',
             'email.unique' => 'البريد مستخدم من حساب آخر.', 'phone.regex' => 'رقم الجوال غير صحيح.', 'newPassword.min' => 'كلمة المرور 8 أحرف على الأقل.',
@@ -76,16 +80,12 @@ class CustomerShow extends Component
         $user->update($data);
         $user->forceFill(['is_active' => $this->is_active])->save();
 
-        if ($this->roleSlug !== '' && $this->roleSlug !== $user->role?->slug && auth()->user()->can('assignRole', $user)) {
-            $role = Role::where('slug', $this->roleSlug)->first();
-
-            if ($role) {
-                $user->role()->associate($role)->save();
-            }
+        if ($this->roleSlug !== $user->role?->slug) {
+            $user->role()->associate(Role::where('slug', $this->roleSlug)->firstOrFail())->save();
         }
 
         $this->newPassword = '';
-        $this->dispatch('notify', message: 'تم حفظ بيانات العميل', type: 'success');
+        $this->dispatch('notify', message: 'تم حفظ بيانات المستخدم', type: 'success');
     }
 
     public function render()
@@ -102,8 +102,11 @@ class CustomerShow extends Component
             'user' => $user,
             'stats' => $stats,
             'orders' => Order::query()->where('user_id', $user->id)->latest('id')->paginate(8),
-            'roles' => Role::orderBy('id')->get(['slug', 'name']),
+            'roles' => Role::query()
+                ->when(! auth()->user()->can('manage-staff'), fn ($q) => $q->where('slug', $user->role?->slug))
+                ->orderBy('id')
+                ->get(['slug', 'name']),
             'canAssignRole' => auth()->user()->can('assignRole', $user),
-        ])->layout('components.layouts.admin', ['title' => 'العميل: '.$user->name]);
+        ])->layout('components.layouts.admin', ['title' => 'المستخدم: '.$user->name]);
     }
 }

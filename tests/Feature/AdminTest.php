@@ -21,6 +21,7 @@ use App\Services\PaymentService;
 use App\Services\ReportService;
 use App\Services\ShippingService;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -410,6 +411,126 @@ class AdminTest extends TestCase
         $this->assertSoftDeleted($customer);
 
         Livewire::test(Admin\CustomerIndex::class)->call('delete', $admin->id)->assertForbidden();
+    }
+
+    public function test_customer_managers_can_create_customer_accounts_but_not_staff_accounts(): void
+    {
+        $this->actingAs($this->staff('admin'));
+
+        Livewire::test(Admin\UserCreate::class)
+            ->set('name', 'عميل جديد')
+            ->set('email', 'new-customer@example.com')
+            ->set('password', 'SecurePass123')
+            ->set('password_confirmation', 'SecurePass123')
+            ->set('roleSlug', Role::MANAGER)
+            ->call('save')
+            ->assertHasErrors('roleSlug');
+
+        $this->assertDatabaseMissing('users', ['email' => 'new-customer@example.com']);
+
+        Livewire::test(Admin\UserCreate::class)
+            ->set('name', 'عميل جديد')
+            ->set('email', 'new-customer@example.com')
+            ->set('password', 'SecurePass123')
+            ->set('password_confirmation', 'SecurePass123')
+            ->call('save')
+            ->assertHasNoErrors()
+            ->assertRedirect(route('admin.users.show', User::where('email', 'new-customer@example.com')->firstOrFail()));
+
+        $customer = User::where('email', 'new-customer@example.com')->firstOrFail();
+        $this->assertSame(Role::CUSTOMER, $customer->role->slug);
+        $this->assertTrue(Hash::check('SecurePass123', $customer->password));
+    }
+
+    public function test_users_area_limits_account_visibility_by_management_permission(): void
+    {
+        $customer = $this->customer(['email' => 'visible-customer@example.com']);
+        $manager = $this->staff('manager');
+        $courier = $this->staff('courier');
+
+        Livewire::actingAs($this->staff('admin'))->test(Admin\CustomerIndex::class)
+            ->assertSee($customer->email)
+            ->assertDontSee($manager->email)
+            ->assertDontSee($courier->email);
+
+        Livewire::actingAs($this->staff('super_admin'))->test(Admin\CustomerIndex::class)
+            ->assertSee($customer->email)
+            ->assertSee($manager->email)
+            ->assertSee($courier->email);
+    }
+
+    public function test_super_admin_can_create_staff_accounts_from_the_users_area(): void
+    {
+        $superAdmin = $this->staff('super_admin');
+
+        Livewire::actingAs($superAdmin)->test(Admin\UserCreate::class)
+            ->set('name', 'مندوب جديد')
+            ->set('email', 'new-courier@example.com')
+            ->set('password', 'SecurePass123')
+            ->set('password_confirmation', 'SecurePass123')
+            ->set('roleSlug', Role::COURIER)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $courier = User::where('email', 'new-courier@example.com')->firstOrFail();
+        $this->assertSame(Role::COURIER, $courier->role->slug);
+        $this->assertSame(true, $courier->is_active);
+    }
+
+    public function test_super_admin_can_manage_custom_role_permissions_and_cannot_delete_a_role_in_use(): void
+    {
+        $superAdmin = $this->staff('super_admin');
+
+        $component = Livewire::actingAs($superAdmin)->test(Admin\Roles::class)
+            ->call('create')
+            ->set('name', 'مشرف الطلبات')
+            ->set('slug', 'order-supervisor')
+            ->set('selectedPermissions', ['access-admin', 'manage-orders'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $role = Role::where('slug', 'order-supervisor')->firstOrFail();
+        $this->assertSame(['access-admin', 'manage-orders'], $role->permissions);
+
+        $user = $this->customer();
+        $user->forceFill(['role_id' => $role->id])->save();
+        $user->delete();
+
+        $component->call('delete', $role->id)->assertHasErrors('roleId');
+        $this->assertModelExists($role);
+
+        $component->call('edit', $role->id)
+            ->set('selectedPermissions', ['manage-orders'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame(['manage-orders'], $role->fresh()->permissions);
+    }
+
+    public function test_role_manager_cannot_grant_admin_permissions_to_public_customer_role(): void
+    {
+        $customerRole = Role::where('slug', Role::CUSTOMER)->firstOrFail();
+
+        Livewire::actingAs($this->staff('super_admin'))->test(Admin\Roles::class)
+            ->call('edit', $customerRole->id)
+            ->set('selectedPermissions', ['access-admin', 'manage-staff'])
+            ->call('save')
+            ->assertHasErrors('selectedPermissions');
+
+        $this->assertSame([], $customerRole->fresh()->permissions);
+    }
+
+    public function test_role_manager_rejects_permissions_outside_the_application_allowlist(): void
+    {
+        Livewire::actingAs($this->staff('super_admin'))->test(Admin\Roles::class)
+            ->call('create')
+            ->set('name', 'صلاحية غير معروفة')
+            ->set('slug', 'unknown-permission-role')
+            ->set('selectedPermissions', ['manage-everything'])
+            ->call('save')
+            ->assertHasErrors('selectedPermissions.0');
+
+        $this->assertDatabaseMissing('roles', ['slug' => 'unknown-permission-role']);
     }
 
     public function test_settings_are_saved_and_used_by_the_storefront(): void
