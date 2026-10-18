@@ -40,6 +40,10 @@ class Checkout extends Component
         'city' => '', 'district' => '', 'street' => '', 'building' => '', 'postal_code' => '',
     ];
 
+    public ?string $deliveryLatitude = null;
+
+    public ?string $deliveryLongitude = null;
+
     public ?int $shippingMethodId = null;
 
     public string $couponCode = '';
@@ -113,7 +117,7 @@ class Checkout extends Component
                 'email' => ['required', 'email:rfc', 'max:190'],
                 'phone' => ['required', 'string', 'regex:/^[0-9+\-\s()]{7,20}$/'],
             ],
-            2 => $this->addressId ? [] : [
+            2 => ($this->addressId ? [] : [
                 'address.full_name' => ['required', 'string', 'max:120'],
                 'address.phone' => ['required', 'string', 'regex:/^[0-9+\-\s()]{7,20}$/'],
                 'address.country' => ['required', 'string', 'max:80'],
@@ -122,6 +126,9 @@ class Checkout extends Component
                 'address.street' => ['required', 'string', 'max:190'],
                 'address.building' => ['nullable', 'string', 'max:60'],
                 'address.postal_code' => ['nullable', 'string', 'max:20'],
+            ]) + [
+                'deliveryLatitude' => ['required', 'numeric', 'between:-90,90'],
+                'deliveryLongitude' => ['required', 'numeric', 'between:-180,180'],
             ],
             3 => ['shippingMethodId' => ['required', 'integer']],
             5 => ['paymentMethod' => ['required', 'string']],
@@ -136,6 +143,12 @@ class Checkout extends Component
             'email' => 'صيغة البريد الإلكتروني غير صحيحة.',
             'regex' => 'صيغة غير صحيحة.',
             'max' => 'القيمة طويلة جداً.',
+            'deliveryLatitude.required' => 'يرجى تحديد موقع التسليم.',
+            'deliveryLongitude.required' => 'يرجى تحديد موقع التسليم.',
+            'deliveryLatitude.numeric' => 'إحداثيات موقع التسليم غير صحيحة.',
+            'deliveryLongitude.numeric' => 'إحداثيات موقع التسليم غير صحيحة.',
+            'deliveryLatitude.between' => 'إحداثيات موقع التسليم غير صحيحة.',
+            'deliveryLongitude.between' => 'إحداثيات موقع التسليم غير صحيحة.',
         ];
     }
 
@@ -149,11 +162,11 @@ class Checkout extends Component
 
     public function next(): void
     {
-        $this->validateStep($this->step);
-
         if ($this->step === 2 && $this->addressId) {
             abort_unless(auth()->user()?->addresses()->whereKey($this->addressId)->exists(), 403);
         }
+
+        $this->validateStep($this->step);
 
         if ($this->step === 3 && ! $this->shippingMethods->contains('id', $this->shippingMethodId)) {
             $this->addError('shippingMethodId', 'طريقة الشحن غير متاحة.');
@@ -185,6 +198,28 @@ class Checkout extends Component
     public function selectAddress(?int $id): void
     {
         $this->addressId = $id;
+        $this->clearDeliveryLocation();
+    }
+
+    public function setDeliveryLocation(string|int|float $latitude, string|int|float $longitude): void
+    {
+        $this->deliveryLatitude = (string) $latitude;
+        $this->deliveryLongitude = (string) $longitude;
+        $this->validate([
+            'deliveryLatitude' => ['required', 'numeric', 'between:-90,90'],
+            'deliveryLongitude' => ['required', 'numeric', 'between:-180,180'],
+        ], [
+            'deliveryLatitude.between' => 'إحداثيات موقع التسليم غير صحيحة.',
+            'deliveryLongitude.between' => 'إحداثيات موقع التسليم غير صحيحة.',
+        ]);
+    }
+
+    public function clearDeliveryLocation(): void
+    {
+        $this->deliveryLatitude = null;
+        $this->deliveryLongitude = null;
+        $this->resetValidation('deliveryLatitude');
+        $this->resetValidation('deliveryLongitude');
     }
 
     public function applyCoupon(): void
@@ -220,6 +255,10 @@ class Checkout extends Component
 
         RateLimiter::hit($limiterKey, 60);
 
+        if ($this->addressId) {
+            abort_unless(auth()->user()?->addresses()->whereKey($this->addressId)->exists(), 403);
+        }
+
         foreach ([1, 2, 3, 5] as $step) {
             $this->validateStep($step);
         }
@@ -242,6 +281,8 @@ class Checkout extends Component
                 'email' => $this->email,
                 'phone' => trim($this->phone),
                 'address' => $snapshot,
+                'delivery_latitude' => $this->deliveryLatitude,
+                'delivery_longitude' => $this->deliveryLongitude,
                 'shipping_method_id' => $this->shippingMethodId,
                 'payment_method' => $this->paymentMethod,
                 'note' => $this->note ? strip_tags(trim($this->note)) : null,

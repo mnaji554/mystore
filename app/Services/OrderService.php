@@ -28,7 +28,7 @@ class OrderService
      * Create an order from a cart. Every price is recomputed from the database inside a transaction
      * with row locks, so nothing coming from the browser influences the totals.
      *
-     * @param  array{name:string,email:string,phone:string,address:array,shipping_method_id:int,payment_method:string,note?:?string}  $data
+     * @param  array{name:string,email:string,phone:string,address:array,shipping_method_id:int,payment_method:string,delivery_latitude?:int|float|string|null,delivery_longitude?:int|float|string|null,note?:?string}  $data
      */
     public function createFromCart(Cart $cart, array $data, ?User $user = null): Order
     {
@@ -66,6 +66,8 @@ class OrderService
                 'customer_email' => strtolower($data['email']),
                 'customer_phone' => $data['phone'],
                 'shipping_address' => $data['address'],
+                'delivery_latitude' => $data['delivery_latitude'] ?? null,
+                'delivery_longitude' => $data['delivery_longitude'] ?? null,
                 'shipping_method_id' => $shippingMethod->id,
                 'shipping_method_name' => $shippingMethod->name,
                 'payment_method' => $data['payment_method'],

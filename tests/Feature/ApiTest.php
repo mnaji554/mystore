@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\OrderStatus;
 use App\Models\Address;
 use App\Models\Coupon;
+use App\Models\Order;
 use App\Services\CartService;
 use App\Services\OrderService;
 use Illuminate\Http\UploadedFile;
@@ -120,17 +121,21 @@ class ApiTest extends TestCase
         $method = $this->shipping(['price' => 20]);
         $address = Address::create(['user_id' => $user->id, 'full_name' => 'أنا', 'phone' => '0501234567', 'city' => 'الرياض', 'street' => 'شارع 1']);
 
-        $this->postJson('/api/v1/orders', ['address_id' => $address->id, 'shipping_method_id' => $method->id, 'payment_method' => 'cod'])->assertStatus(422);
+        $coordinates = ['delivery_latitude' => 24.7136, 'delivery_longitude' => 46.6753];
+        $this->postJson('/api/v1/orders', ['address_id' => $address->id, 'shipping_method_id' => $method->id, 'payment_method' => 'cod'] + $coordinates)->assertStatus(422);
 
         $this->postJson('/api/v1/cart/items', ['product_id' => $product->id, 'quantity' => 2]);
 
-        $this->postJson('/api/v1/orders', ['shipping_method_id' => $method->id, 'payment_method' => 'cod'])->assertStatus(422); // no address
+        $this->postJson('/api/v1/orders', ['shipping_method_id' => $method->id, 'payment_method' => 'cod'] + $coordinates)->assertStatus(422); // no address
 
-        $response = $this->postJson('/api/v1/orders', ['address_id' => $address->id, 'shipping_method_id' => $method->id, 'payment_method' => 'cod', 'note' => 'api'])
+        $response = $this->postJson('/api/v1/orders', ['address_id' => $address->id, 'shipping_method_id' => $method->id, 'payment_method' => 'cod', 'note' => 'api'] + $coordinates)
             ->assertCreated()->assertJsonPath('data.status', 'pending')->assertJsonPath('data.grand_total', 250)->assertJsonCount(1, 'data.items');
         $number = $response->json('data.order_number');
+        $order = Order::query()->where('order_number', $number)->firstOrFail();
 
         $this->assertSame(3, $product->fresh()->stock);
+        $this->assertSame('24.7136000', $order->delivery_latitude);
+        $this->assertSame('46.6753000', $order->delivery_longitude);
         $this->getJson('/api/v1/orders')->assertOk()->assertJsonCount(1, 'data');
         $this->getJson("/api/v1/orders/{$number}")->assertOk()->assertJsonPath('data.order_number', $number)->assertJsonStructure(['data' => ['history']]);
 
@@ -153,11 +158,35 @@ class ApiTest extends TestCase
         $method = $this->shipping();
         $this->postJson('/api/v1/cart/items', ['product_id' => $this->product()->id]);
 
-        $this->postJson('/api/v1/orders', ['address_id' => $foreign->id, 'shipping_method_id' => $method->id, 'payment_method' => 'cod'])->assertStatus(422);
+        $coordinates = ['delivery_latitude' => 24.7136, 'delivery_longitude' => 46.6753];
+        $this->postJson('/api/v1/orders', ['address_id' => $foreign->id, 'shipping_method_id' => $method->id, 'payment_method' => 'cod'] + $coordinates)->assertStatus(422);
 
         $inline = ['full_name' => 'أنا', 'phone' => '0501234567', 'city' => 'الرياض', 'street' => 'شارع'];
-        $this->postJson('/api/v1/orders', ['address' => $inline, 'shipping_method_id' => $method->id, 'payment_method' => 'bitcoin'])->assertStatus(422);
-        $this->postJson('/api/v1/orders', ['address' => $inline, 'shipping_method_id' => $method->id, 'payment_method' => 'cod'])->assertCreated();
+        $this->postJson('/api/v1/orders', ['address' => $inline, 'shipping_method_id' => $method->id, 'payment_method' => 'bitcoin'] + $coordinates)->assertStatus(422);
+        $this->postJson('/api/v1/orders', ['address' => $inline, 'shipping_method_id' => $method->id, 'payment_method' => 'cod'] + $coordinates)->assertCreated();
+    }
+
+    public function test_api_checkout_requires_valid_delivery_coordinates(): void
+    {
+        $user = $this->customer();
+        Sanctum::actingAs($user);
+        $method = $this->shipping();
+        $this->postJson('/api/v1/cart/items', ['product_id' => $this->product()->id]);
+        $address = ['full_name' => 'أنا', 'phone' => '0501234567', 'city' => 'الرياض', 'street' => 'شارع'];
+
+        $this->postJson('/api/v1/orders', [
+            'address' => $address,
+            'shipping_method_id' => $method->id,
+            'payment_method' => 'cod',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['delivery_latitude', 'delivery_longitude']);
+
+        $this->postJson('/api/v1/orders', [
+            'address' => $address,
+            'shipping_method_id' => $method->id,
+            'payment_method' => 'cod',
+            'delivery_latitude' => 91,
+            'delivery_longitude' => 181,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['delivery_latitude', 'delivery_longitude']);
     }
 
     public function test_profile_endpoints(): void

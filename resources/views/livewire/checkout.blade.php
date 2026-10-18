@@ -66,6 +66,44 @@
                             <label class="mt-4 flex items-center gap-2 text-sm font-bold"><input type="checkbox" wire:model="saveAddress" class="rounded text-brand-600"> حفظ العنوان في حسابي</label>
                         @endauth
                     @endif
+
+                    <div x-data="{
+                        locationMessage: '',
+                        startGeolocation() {
+                            this.locationMessage = 'جارٍ تحديد الموقع...';
+                            $wire.clearDeliveryLocation().then(() => {
+                                if (!navigator.geolocation) {
+                                    this.locationMessage = 'متصفحك لا يدعم تحديد الموقع. استخدم متصفحاً حديثاً واتصالاً آمناً.';
+                                    return;
+                                }
+
+                                navigator.geolocation.getCurrentPosition(async (position) => {
+                                    try {
+                                        await $wire.setDeliveryLocation(position.coords.latitude, position.coords.longitude);
+                                        this.locationMessage = 'تم تحديد موقع التسليم بنجاح.';
+                                    } catch {
+                                        this.locationMessage = 'تعذر التحقق من الموقع. يرجى المحاولة مرة أخرى.';
+                                    }
+                                }, (error) => {
+                                    this.locationMessage = error.code === 1
+                                        ? 'يرجى السماح بالوصول إلى الموقع لإكمال الطلب.'
+                                        : 'تعذر تحديد موقعك. تحقق من إعدادات الجهاز وحاول مجدداً.';
+                                }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+                            });
+                        }
+                    }" class="mt-5 space-y-2 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                        <p class="font-bold">موقع التسليم <span class="text-rose-600">*</span></p>
+                        <p class="text-sm text-slate-500">يلزم تحديد موقع التسليم من جهازك لحساب المسافة للمندوب. لا نرسل موقعك إلى خدمات خرائط خارجية.</p>
+                        <button type="button" @click="startGeolocation()" class="btn-outline">
+                            {{ $deliveryLatitude !== null && $deliveryLongitude !== null ? 'تحديث موقع التسليم' : 'تحديد موقع التسليم' }}
+                        </button>
+                        <p x-show="locationMessage" x-text="locationMessage" class="text-sm text-slate-600 dark:text-slate-300"></p>
+                        @if($deliveryLatitude !== null && $deliveryLongitude !== null)
+                            <p class="text-sm font-bold text-emerald-700 dark:text-emerald-400">تم حفظ موقع التسليم.</p>
+                        @endif
+                        @error('deliveryLatitude')<p class="text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
+                        @error('deliveryLongitude')<p class="text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
+                    </div>
                 @endif
 
                 {{-- 3: shipping --}}
@@ -131,6 +169,7 @@
                         <div class="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50"><p class="mb-1 font-extrabold">العنوان</p>
                             @if($addressId && ($saved = $this->savedAddresses->firstWhere('id', $addressId))){{ $saved->full_name }}<br>{{ $saved->summary }}
                             @else{{ $address['full_name'] }}<br>{{ collect([$address['street'], $address['building'], $address['district'], $address['city'], $address['country']])->filter()->implode('، ') }}@endif
+                        <br><span class="font-bold text-emerald-700 dark:text-emerald-400">موقع التسليم محدد</span>
                         </div>
                         <div class="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50"><p class="mb-1 font-extrabold">الشحن</p>{{ $method?->name }} · {{ $method?->delivery_estimate }}</div>
                         <div class="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50"><p class="mb-1 font-extrabold">الدفع</p>{{ $this->gateways->get($paymentMethod)?->label() }}</div>

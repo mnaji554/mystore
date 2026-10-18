@@ -200,17 +200,81 @@ class CourierTest extends TestCase
         $this->assertNull($order->fresh()->courier_id);
     }
 
-    public function test_courier_only_sees_orders_assigned_to_their_account(): void
+    public function test_courier_sees_available_orders_and_their_straight_line_distance(): void
     {
         $assigned = $this->order();
         $other = $this->order();
+        $legacy = $this->order();
+        $cancelled = $this->order();
         $courier = $this->courier();
         $assigned->update(['courier_id' => $courier->id, 'status' => OrderStatus::Shipped]);
-        $other->update(['status' => OrderStatus::Shipped]);
+        $other->update([
+            'delivery_latitude' => 0,
+            'delivery_longitude' => 1,
+            'status' => OrderStatus::Shipped,
+        ]);
+        $legacy->update(['delivery_latitude' => null, 'delivery_longitude' => null]);
+        $cancelled->update(['status' => OrderStatus::Cancelled]);
 
         Livewire::actingAs($courier)->test(CourierOrders::class)
+            ->call('setCourierLocation', 0, 0)
             ->assertSee($assigned->order_number)
-            ->assertDontSee($other->order_number);
+            ->assertSee($other->order_number)
+            ->assertSee($legacy->order_number)
+            ->assertSee('111.2 كم')
+            ->assertSee('المسافة غير متاحة لهذا الطلب لعدم توفر إحداثيات التسليم.')
+            ->assertDontSee($cancelled->order_number);
+    }
+
+    public function test_courier_can_atomically_claim_an_unassigned_order(): void
+    {
+        $order = $this->order();
+        $firstCourier = $this->courier();
+        $secondCourier = $this->courier();
+
+        Livewire::actingAs($firstCourier)->test(CourierOrders::class)
+            ->call('setCourierLocation', 24.7, 46.6)
+            ->call('claim', $order->id)
+            ->assertDispatched('notify', message: 'تم استلام الطلب بنجاح.', type: 'success');
+
+        $this->assertSame($firstCourier->id, $order->fresh()->courier_id);
+
+        Livewire::actingAs($secondCourier)->test(CourierOrders::class)
+            ->call('setCourierLocation', 24.7, 46.6)
+            ->call('claim', $order->id)
+            ->assertDispatched('notify', message: 'لم يعد هذا الطلب متاحاً للاستلام.', type: 'error');
+
+        $this->assertSame($firstCourier->id, $order->fresh()->courier_id);
+    }
+
+    public function test_courier_must_set_location_before_claiming_an_order(): void
+    {
+        $order = $this->order();
+        $courier = $this->courier();
+
+        Livewire::actingAs($courier)->test(CourierOrders::class)
+            ->call('claim', $order->id)
+            ->assertHasErrors(['courierLatitude', 'courierLongitude']);
+
+        $this->assertNull($order->fresh()->courier_id);
+
+        Livewire::actingAs($courier)->test(CourierOrders::class)
+            ->call('setCourierLocation', 91, 181)
+            ->assertHasErrors(['courierLatitude', 'courierLongitude']);
+    }
+
+    public function test_courier_cannot_claim_a_cancelled_order(): void
+    {
+        $order = $this->order();
+        $order->update(['status' => OrderStatus::Cancelled]);
+        $courier = $this->courier();
+
+        Livewire::actingAs($courier)->test(CourierOrders::class)
+            ->call('setCourierLocation', 24.7, 46.6)
+            ->call('claim', $order->id)
+            ->assertDispatched('notify', message: 'لم يعد هذا الطلب متاحاً للاستلام.', type: 'error');
+
+        $this->assertNull($order->fresh()->courier_id);
     }
 
     public function test_shipping_method_is_hidden_when_its_company_is_inactive(): void

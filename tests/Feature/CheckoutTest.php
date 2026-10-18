@@ -142,6 +142,7 @@ class CheckoutTest extends TestCase
             ->set('name', 'زائر')->set('email', 'guest@example.com')->set('phone', '0501234567')
             ->call('next')->assertSet('step', 2)
             ->set('address.full_name', 'زائر')->set('address.phone', '0501234567')->set('address.city', 'جدة')->set('address.street', 'شارع التحلية')
+            ->call('setDeliveryLocation', 21.5433, 39.1728)
             ->call('next')->assertSet('step', 3)
             ->set('shippingMethodId', $method->id)->call('next')->assertSet('step', 4)
             ->call('next')->assertSet('step', 5)
@@ -156,8 +157,33 @@ class CheckoutTest extends TestCase
         $this->assertSame('guest@example.com', $order->customer_email);
         $this->assertEquals(140.00, $order->grand_total); // 100 + 25 shipping + 15 tax (tax excludes shipping)
         $this->assertSame('جدة', $order->shipping_address['city']);
+        $this->assertSame('21.5433000', $order->delivery_latitude);
+        $this->assertSame('39.1728000', $order->delivery_longitude);
 
         $this->get(route('checkout.success', $order->order_number))->assertOk()->assertSee($order->order_number);
+    }
+
+    public function test_checkout_requires_valid_delivery_coordinates(): void
+    {
+        $this->product();
+        Livewire::test(ProductListing::class, ['mode' => 'all'])->call('addToCart', Product::first()->id);
+
+        Livewire::test(Checkout::class)
+            ->set('name', 'عميل')
+            ->set('email', 'buyer@example.com')
+            ->set('phone', '0501234567')
+            ->call('next')
+            ->set('address.full_name', 'عميل')
+            ->set('address.phone', '0501234567')
+            ->set('address.city', 'جدة')
+            ->set('address.street', 'شارع')
+            ->call('next')
+            ->assertHasErrors(['deliveryLatitude', 'deliveryLongitude'])
+            ->assertSet('step', 2)
+            ->call('setDeliveryLocation', 'not-a-coordinate', 'not-a-coordinate')
+            ->assertHasErrors(['deliveryLatitude', 'deliveryLongitude'])
+            ->call('setDeliveryLocation', 91, 181)
+            ->assertHasErrors(['deliveryLatitude', 'deliveryLongitude']);
     }
 
     public function test_wizard_validates_each_step(): void
@@ -188,7 +214,7 @@ class CheckoutTest extends TestCase
 
         Livewire::test(Checkout::class)->set('addressId', $theirs->id)->set('step', 2)->call('next')->assertForbidden();
 
-        $component->call('placeOrder');
+        $component->call('setDeliveryLocation', 24.7136, 46.6753)->call('placeOrder');
         $this->assertSame('الرياض', Order::firstOrFail()->shipping_address['city']);
         $this->assertSame($user->id, Order::first()->user_id);
     }

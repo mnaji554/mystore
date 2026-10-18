@@ -18,7 +18,7 @@ class Order extends Model
 
     protected $fillable = [
         'order_number', 'user_id', 'customer_name', 'customer_email', 'customer_phone',
-        'shipping_address', 'shipping_method_id', 'shipping_method_name', 'tracking_number',
+        'shipping_address', 'delivery_latitude', 'delivery_longitude', 'shipping_method_id', 'shipping_method_name', 'tracking_number',
         'tracking_url', 'payment_method', 'payment_status', 'status', 'coupon_code', 'subtotal',
         'discount_total', 'coupon_discount', 'shipping_cost', 'tax_total', 'grand_total',
         'currency', 'customer_note', 'placed_at', 'courier_id',
@@ -30,6 +30,8 @@ class Order extends Model
             'status' => OrderStatus::class,
             'payment_status' => PaymentStatus::class,
             'shipping_address' => 'array',
+            'delivery_latitude' => 'decimal:7',
+            'delivery_longitude' => 'decimal:7',
             'subtotal' => 'decimal:2',
             'discount_total' => 'decimal:2',
             'coupon_discount' => 'decimal:2',

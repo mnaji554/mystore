@@ -77,6 +77,8 @@ abstract class TestCase extends BaseTestCase
             ],
             'shipping_method_id' => $method->id,
             'payment_method' => $payment,
+            'delivery_latitude' => 24.7136,
+            'delivery_longitude' => 46.6753,
             'note' => null,
         ], $overrides);
     }
