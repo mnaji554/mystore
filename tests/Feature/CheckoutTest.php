@@ -171,7 +171,7 @@ class CheckoutTest extends TestCase
         $this->product();
         Livewire::test(ProductListing::class, ['mode' => 'all'])->call('addToCart', Product::first()->id);
 
-        Livewire::test(Checkout::class)
+        $component = Livewire::test(Checkout::class)
             ->set('name', 'عميل')
             ->set('email', 'buyer@example.com')
             ->set('phone', '0501234567')
@@ -182,10 +182,14 @@ class CheckoutTest extends TestCase
             ->set('address.street', 'شارع')
             ->call('next')
             ->assertHasErrors(['deliveryLatitude', 'deliveryLongitude'])
-            ->assertSet('step', 2)
-            ->call('setDeliveryLocation', 'not-a-coordinate', 'not-a-coordinate')
-            ->assertHasErrors(['deliveryLatitude', 'deliveryLongitude'])
-            ->call('setDeliveryLocation', 91, 181)
+            ->assertSet('step', 2);
+
+        $this->assertSame(1, substr_count($component->html(), 'يرجى تحديد موقع التسليم.'));
+
+        $component->call('setDeliveryLocation', 'not-a-coordinate', 'not-a-coordinate')
+            ->assertHasErrors(['deliveryLatitude', 'deliveryLongitude']);
+
+        $component->call('setDeliveryLocation', 91, 181)
             ->assertHasErrors(['deliveryLatitude', 'deliveryLongitude']);
     }
 

@@ -79,8 +79,9 @@
                         @if($deliveryLatitude !== null && $deliveryLongitude !== null)
                             <p class="text-sm font-bold text-emerald-700 dark:text-emerald-400">تم حفظ موقع التسليم.</p>
                         @endif
-                        @error('deliveryLatitude')<p class="text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
-                        @error('deliveryLongitude')<p class="text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
+                        @if($errors->has('deliveryLatitude') || $errors->has('deliveryLongitude'))
+                            <p class="text-sm font-bold text-rose-600">{{ $errors->first('deliveryLatitude') ?: $errors->first('deliveryLongitude') }}</p>
+                        @endif
 
                         <div x-show="mapOpen" x-cloak x-transition.opacity
                              @click.self="closeMap()"
