@@ -67,41 +67,54 @@
                         @endauth
                     @endif
 
-                    <div x-data="{
-                        locationMessage: '',
-                        startGeolocation() {
-                            this.locationMessage = 'جارٍ تحديد الموقع...';
-                            if (!navigator.geolocation) {
-                                this.locationMessage = 'متصفحك لا يدعم تحديد الموقع. استخدم متصفحاً حديثاً واتصالاً آمناً.';
-                                return;
-                            }
-
-                            navigator.geolocation.getCurrentPosition(async (position) => {
-                                try {
-                                    await $wire.clearDeliveryLocation();
-                                    await $wire.setDeliveryLocation(position.coords.latitude, position.coords.longitude);
-                                    this.locationMessage = 'تم تحديد موقع التسليم بنجاح.';
-                                } catch {
-                                    this.locationMessage = 'تعذر التحقق من الموقع. يرجى المحاولة مرة أخرى.';
-                                }
-                            }, (error) => {
-                                this.locationMessage = error.code === 1
-                                    ? 'يرجى السماح بالوصول إلى الموقع لإكمال الطلب.'
-                                    : 'تعذر تحديد موقعك. تحقق من إعدادات الجهاز وحاول مجدداً.';
-                            }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-                        }
-                    }" class="mt-5 space-y-2 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                    <div x-data="deliveryLocationPicker(@js($deliveryLatitude), @js($deliveryLongitude))"
+                         @keydown.escape.window="if (mapOpen) closeMap()"
+                         @delivery-location-cleared.window="clearSelection()"
+                         class="mt-5 space-y-2 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                         <p class="font-bold">موقع التسليم <span class="text-rose-600">*</span></p>
-                        <p class="text-sm text-slate-500">يلزم تحديد موقع التسليم من جهازك لحساب المسافة للمندوب. لا نرسل موقعك إلى خدمات خرائط خارجية.</p>
-                        <button type="button" @click="startGeolocation()" class="btn-outline">
+                        <p class="text-sm text-slate-500">اختر موقع التسليم على الخريطة أو استخدم موقع جهازك الحالي. لن يُحفظ الموقع إلا بعد تأكيد الاختيار.</p>
+                        <button type="button" @click="openMap()" class="btn-outline">
                             {{ $deliveryLatitude !== null && $deliveryLongitude !== null ? 'تحديث موقع التسليم' : 'تحديد موقع التسليم' }}
                         </button>
-                        <p x-show="locationMessage" x-text="locationMessage" class="text-sm text-slate-600 dark:text-slate-300"></p>
                         @if($deliveryLatitude !== null && $deliveryLongitude !== null)
                             <p class="text-sm font-bold text-emerald-700 dark:text-emerald-400">تم حفظ موقع التسليم.</p>
                         @endif
                         @error('deliveryLatitude')<p class="text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
                         @error('deliveryLongitude')<p class="text-sm font-bold text-rose-600">{{ $message }}</p>@enderror
+
+                        <div x-show="mapOpen" x-cloak x-transition.opacity
+                             @click.self="closeMap()"
+                             class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:p-6"
+                             role="dialog" aria-modal="true" aria-labelledby="delivery-map-title">
+                            <section class="card relative flex max-h-[92vh] w-full max-w-5xl flex-col gap-4 overflow-y-auto p-4 shadow-2xl sm:p-6">
+                                <header class="flex items-start justify-between gap-4">
+                                    <div>
+                                        <h2 id="delivery-map-title" class="text-lg font-extrabold">تحديد موقع التسليم على الخريطة</h2>
+                                        <p class="mt-1 text-sm text-slate-500">اضغط على الخريطة أو حرّك العلامة لاختيار الموقع. تُحمّل الخريطة من OpenStreetMap.</p>
+                                    </div>
+                                    <button type="button" @click="closeMap()" class="btn-ghost !p-2" aria-label="إغلاق النافذة">
+                                        <x-icon name="close" />
+                                    </button>
+                                </header>
+
+                                <div x-ref="map" wire:ignore dir="ltr" class="h-[55vh] min-h-80 max-h-[34rem] rounded-xl bg-slate-100 dark:bg-slate-800"></div>
+                                <p x-show="pendingLatitude !== null" class="text-sm font-semibold text-slate-600 dark:text-slate-300" dir="ltr">
+                                    <span x-text="pendingLatitude?.toFixed(6)"></span>,
+                                    <span x-text="pendingLongitude?.toFixed(6)"></span>
+                                </p>
+                                <p x-show="locationMessage" x-text="locationMessage" role="status" class="text-sm font-bold text-rose-600"></p>
+
+                                <footer class="flex flex-wrap justify-between gap-3">
+                                    <button type="button" @click="useCurrentLocation()" class="btn-outline">استخدم موقعي الحالي</button>
+                                    <div class="flex gap-2">
+                                        <button type="button" @click="closeMap()" class="btn-ghost">إلغاء</button>
+                                        <button type="button" @click="confirmLocation()" :disabled="pendingLatitude === null" class="btn-primary">
+                                            تأكيد الموقع
+                                        </button>
+                                    </div>
+                                </footer>
+                            </section>
+                        </div>
                     </div>
                 @endif
 

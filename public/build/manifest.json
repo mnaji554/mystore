@@ -41,8 +41,41 @@
     "src": "node_modules/chart.js/auto/auto.js",
     "isDynamicEntry": true
   },
+  "node_modules/leaflet/dist/images/layers-2x.png": {
+    "file": "assets/layers-2x-Bpkbi35X.png",
+    "src": "node_modules/leaflet/dist/images/layers-2x.png"
+  },
+  "node_modules/leaflet/dist/images/layers.png": {
+    "file": "assets/layers-BWBAp2CZ.png",
+    "src": "node_modules/leaflet/dist/images/layers.png"
+  },
+  "node_modules/leaflet/dist/images/marker-icon-2x.png": {
+    "file": "assets/marker-icon-2x-_ZA0WGCc.png",
+    "src": "node_modules/leaflet/dist/images/marker-icon-2x.png"
+  },
+  "node_modules/leaflet/dist/images/marker-icon.png": {
+    "file": "assets/marker-icon-hN30_KVU.png",
+    "src": "node_modules/leaflet/dist/images/marker-icon.png"
+  },
+  "node_modules/leaflet/dist/images/marker-shadow.png": {
+    "file": "assets/marker-shadow-f7SaPCxT.png",
+    "src": "node_modules/leaflet/dist/images/marker-shadow.png"
+  },
+  "node_modules/leaflet/dist/leaflet-src.js": {
+    "file": "assets/leaflet-src-BYSsTUwO.js",
+    "name": "leaflet-src",
+    "src": "node_modules/leaflet/dist/leaflet-src.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.js"
+    ]
+  },
+  "node_modules/leaflet/dist/leaflet.css": {
+    "file": "assets/leaflet-1DTFk8zz.css",
+    "src": "node_modules/leaflet/dist/leaflet.css"
+  },
   "resources/css/app.css": {
-    "file": "assets/app-BHRLKI4C.css",
+    "file": "assets/app-8pBcEhfE.css",
     "name": "app",
     "names": [
       "app.css"
@@ -51,12 +84,18 @@
     "isEntry": true
   },
   "resources/js/app.js": {
-    "file": "assets/app-DOVtGN9b.js",
+    "file": "assets/app-3qrh9lH0.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "dynamicImports": [
-      "node_modules/chart.js/auto/auto.js"
+      "node_modules/chart.js/auto/auto.js",
+      "node_modules/leaflet/dist/leaflet-src.js"
+    ],
+    "assets": [
+      "assets/marker-icon-hN30_KVU.png",
+      "assets/marker-icon-2x-_ZA0WGCc.png",
+      "assets/marker-shadow-f7SaPCxT.png"
     ]
   }
 }

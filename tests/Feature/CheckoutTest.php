@@ -141,6 +141,9 @@ class CheckoutTest extends TestCase
         $component = Livewire::test(Checkout::class)
             ->set('name', 'زائر')->set('email', 'guest@example.com')->set('phone', '0501234567')
             ->call('next')->assertSet('step', 2)
+            ->assertSee('تحديد موقع التسليم على الخريطة')
+            ->assertSee('استخدم موقعي الحالي')
+            ->assertSee('OpenStreetMap')
             ->set('address.full_name', 'زائر')->set('address.phone', '0501234567')->set('address.city', 'جدة')->set('address.street', 'شارع التحلية')
             ->call('setDeliveryLocation', 21.5433, 39.1728)
             ->call('next')->assertSet('step', 3)
@@ -214,7 +217,12 @@ class CheckoutTest extends TestCase
 
         Livewire::test(Checkout::class)->set('addressId', $theirs->id)->set('step', 2)->call('next')->assertForbidden();
 
-        $component->call('setDeliveryLocation', 24.7136, 46.6753)->call('placeOrder');
+        $component->call('setDeliveryLocation', 24.7136, 46.6753)
+            ->call('selectAddress', $mine->id)
+            ->assertSet('deliveryLatitude', null)
+            ->assertDispatched('delivery-location-cleared')
+            ->call('setDeliveryLocation', 24.7136, 46.6753)
+            ->call('placeOrder');
         $this->assertSame('الرياض', Order::firstOrFail()->shipping_address['city']);
         $this->assertSame($user->id, Order::first()->user_id);
     }

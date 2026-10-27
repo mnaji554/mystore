@@ -220,6 +220,7 @@ class Checkout extends Component
         $this->deliveryLongitude = null;
         $this->resetValidation('deliveryLatitude');
         $this->resetValidation('deliveryLongitude');
+        $this->dispatch('delivery-location-cleared');
     }
 
     public function applyCoupon(): void
