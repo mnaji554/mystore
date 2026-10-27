@@ -196,4 +196,118 @@ Alpine.data('deliveryLocationPicker', (initialLatitude, initialLongitude) => ({
     },
 }));
 
+Alpine.data('courierLocationPicker', () => ({
+    map: null,
+    marker: null,
+    leaflet: null,
+    mapOpen: false,
+    locationMessage: '',
+    latitude: null,
+    longitude: null,
+    async openMap() {
+        this.mapOpen = true;
+        this.locationMessage = '';
+        this.latitude = null;
+        this.longitude = null;
+        await this.$nextTick();
+
+        try {
+            const [{ default: L }] = await Promise.all([
+                import('leaflet'),
+                import('leaflet/dist/leaflet.css'),
+            ]);
+            this.leaflet = L;
+            L.Icon.Default.mergeOptions({
+                iconUrl: markerIcon,
+                iconRetinaUrl: markerIconRetina,
+                shadowUrl: markerShadow,
+            });
+
+            if (!this.map) {
+                this.map = L.map(this.$refs.map).setView([24.7136, 46.6753], 6);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                    maxZoom: 19,
+                }).addTo(this.map);
+                this.map.on('click', (event) => this.setLocation(event.latlng.lat, event.latlng.lng));
+            } else {
+                this.map.setView([24.7136, 46.6753], 6);
+            }
+
+            this.marker?.remove();
+            this.marker = null;
+            this.map.invalidateSize();
+        } catch (error) {
+            console.error('Unable to load the courier location map.', error);
+            this.locationMessage = 'تعذر تحميل الخريطة. تحقق من اتصال الإنترنت ثم حاول مرة أخرى.';
+        }
+    },
+    setLocation(latitude, longitude) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+
+        if (this.marker) {
+            this.marker.setLatLng([latitude, longitude]);
+            return;
+        }
+
+        this.marker = this.leaflet.marker([latitude, longitude], { draggable: true }).addTo(this.map);
+        this.marker.on('dragend', (event) => {
+            const position = event.target.getLatLng();
+            this.latitude = position.lat;
+            this.longitude = position.lng;
+        });
+    },
+    async confirmLocation() {
+        if (this.latitude === null || this.longitude === null) {
+            return;
+        }
+
+        try {
+            await this.$wire.clearCourierLocation();
+            await this.$wire.setCourierLocation(this.latitude, this.longitude);
+            this.locationMessage = 'تم تحديث موقعك من الخريطة.';
+            this.mapOpen = false;
+        } catch (error) {
+            console.error('Unable to save the courier map location.', error);
+            this.locationMessage = 'تعذر حفظ الموقع. يرجى اختيار نقطة أخرى والمحاولة مجدداً.';
+        }
+    },
+    startGeolocation() {
+        this.locationMessage = 'جارٍ تحديد موقعك...';
+
+        if (!window.isSecureContext) {
+            this.locationMessage = 'يلزم فتح الصفحة عبر HTTPS أو من localhost لاستخدام موقع الجهاز.';
+            return;
+        }
+
+        if (!navigator.geolocation) {
+            this.locationMessage = 'متصفحك لا يدعم تحديد الموقع. اختر موقعك يدويًا على الخريطة.';
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(async (position) => {
+            try {
+                await this.$wire.clearCourierLocation();
+                await this.$wire.setCourierLocation(position.coords.latitude, position.coords.longitude);
+                this.locationMessage = 'تم تحديث موقعك من الجهاز.';
+            } catch (error) {
+                console.error('Unable to update the courier location.', error);
+                this.locationMessage = 'تعذر حفظ موقعك. اختر موقعك يدويًا على الخريطة أو حاول مرة أخرى.';
+            }
+        }, (error) => {
+            this.locationMessage = error.code === 1
+                ? 'تعذر استخدام موقع الجهاز؛ تحقق من إذن الموقع أو اختر موقعك يدويًا على الخريطة.'
+                : 'تعذر تحديد موقع الجهاز. يمكنك اختيار موقعك يدويًا على الخريطة.';
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+    },
+    closeMap() {
+        this.mapOpen = false;
+        this.locationMessage = '';
+    },
+    destroy() {
+        this.map?.remove();
+    },
+}));
+
 Livewire.start();

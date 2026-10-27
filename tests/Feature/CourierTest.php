@@ -218,6 +218,9 @@ class CourierTest extends TestCase
 
         Livewire::actingAs($courier)->test(CourierOrders::class)
             ->call('setCourierLocation', 0, 0)
+            ->assertSee('اختيار الموقع على الخريطة')
+            ->assertSee('لا يتطلب هذا الخيار إذن GPS.')
+            ->assertSee('OpenStreetMap')
             ->assertSee($assigned->order_number)
             ->assertSee($other->order_number)
             ->assertSee($legacy->order_number)

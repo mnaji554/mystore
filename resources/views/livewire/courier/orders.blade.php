@@ -4,50 +4,53 @@
         <p class="mt-1 text-sm text-slate-500">اختر الطلبات المتاحة للتوصيل، وتابع المسافة المباشرة إلى موقع التسليم.</p>
     </div>
 
-    <div x-data="{
-        locationMessage: '',
-        startGeolocation() {
-            this.locationMessage = 'جارٍ تحديد موقعك...';
-            if (!window.isSecureContext) {
-                this.locationMessage = 'يلزم فتح الصفحة عبر HTTPS أو من localhost لاستخدام موقعك الحالي.';
-                return;
-            }
-
-            if (!navigator.geolocation) {
-                this.locationMessage = 'متصفحك لا يدعم تحديد الموقع.';
-                return;
-            }
-
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                try {
-                    await $wire.clearCourierLocation();
-                    await $wire.setCourierLocation(position.coords.latitude, position.coords.longitude);
-                    this.locationMessage = 'تم تحديث موقعك.';
-                } catch (error) {
-                    console.error('Unable to update the courier location.', error);
-                    this.locationMessage = 'تعذر حفظ موقعك. يرجى المحاولة مرة أخرى.';
-                }
-            }, async (error) => {
-                try {
-                    await $wire.clearCourierLocation();
-                } catch (clearError) {
-                    console.error('Unable to clear the courier location.', clearError);
-                    this.locationMessage = 'تعذر تحديث الموقع. يرجى إعادة تحميل الصفحة والمحاولة مرة أخرى.';
-                    return;
-                }
-
-                this.locationMessage = error.code === 1
-                    ? 'إذن الموقع محظور أو مرفوض. فعّل إذن الموقع لهذا الموقع من إعدادات المتصفح ثم أعد المحاولة.'
-                    : 'تعذر تحديد موقعك. تحقق من إعدادات الجهاز وحاول مجدداً.';
-            }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-        }
-    }" class="card flex flex-wrap items-center justify-between gap-3 p-4">
-        <div>
-            <p class="font-bold">موقعك الحالي</p>
-            <p class="text-sm text-slate-500">يُستخدم موقعك لحساب المسافة ولا يُحفظ في حسابك.</p>
-            <p x-show="locationMessage" x-text="locationMessage" class="mt-1 text-sm text-slate-600 dark:text-slate-300"></p>
+    <div x-data="courierLocationPicker()"
+         @keydown.escape.window="if (mapOpen) closeMap()"
+         class="card space-y-4 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="font-bold">موقعك الحالي</p>
+                <p class="text-sm text-slate-500">استخدم موقع الجهاز أو حدّد موقعك يدويًا على الخريطة لعرض المسافات واستلام الطلبات.</p>
+                <p x-show="locationMessage" x-text="locationMessage" role="status" class="mt-1 text-sm text-slate-600 dark:text-slate-300"></p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button type="button" @click="startGeolocation()" class="btn-outline">تحديث موقعي من الجهاز</button>
+                <button type="button" @click="openMap()" class="btn-primary">اختيار الموقع على الخريطة</button>
+            </div>
         </div>
-        <button type="button" @click="startGeolocation()" class="btn-outline">تحديث موقعي</button>
+
+        <template x-teleport="body">
+            <div x-show="mapOpen" x-cloak x-transition.opacity
+                 @click.self="closeMap()"
+                 class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:p-6"
+                 role="dialog" aria-modal="true" aria-labelledby="courier-map-title">
+                <section class="card relative flex max-h-[92vh] w-full max-w-5xl flex-col gap-4 overflow-y-auto p-4 shadow-2xl sm:p-6">
+                    <header class="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 id="courier-map-title" class="text-lg font-extrabold">تحديد موقعك على الخريطة</h2>
+                            <p class="mt-1 text-sm text-slate-500">اضغط على الخريطة أو حرّك العلامة لتحديد موقعك. لا يتطلب هذا الخيار إذن GPS. الخريطة من OpenStreetMap.</p>
+                        </div>
+                        <button type="button" @click="closeMap()" class="btn-ghost !p-2" aria-label="إغلاق النافذة">
+                            <x-icon name="close" />
+                        </button>
+                    </header>
+
+                    <div x-ref="map" wire:ignore dir="ltr" class="h-[55vh] min-h-80 max-h-[34rem] rounded-xl bg-slate-100 dark:bg-slate-800"></div>
+                    <p x-show="latitude !== null" class="text-sm font-semibold text-slate-600 dark:text-slate-300" dir="ltr">
+                        <span x-text="latitude?.toFixed(6)"></span>,
+                        <span x-text="longitude?.toFixed(6)"></span>
+                    </p>
+                    <p x-show="locationMessage" x-text="locationMessage" role="status" class="text-sm font-bold text-rose-600"></p>
+                    <footer class="flex justify-end gap-2">
+                        <button type="button" @click="closeMap()" class="btn-ghost">إلغاء</button>
+                        <button type="button" @click="confirmLocation()" :disabled="latitude === null" class="btn-primary">
+                            تأكيد موقعي
+                        </button>
+                    </footer>
+                </section>
+            </div>
+        </template>
+
     </div>
 
     <section class="space-y-3">
