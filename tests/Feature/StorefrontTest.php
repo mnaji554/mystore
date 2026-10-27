@@ -191,7 +191,10 @@ class StorefrontTest extends TestCase
 
     public function test_responses_include_security_headers(): void
     {
-        $this->get('/')->assertHeader('X-Content-Type-Options', 'nosniff')->assertHeader('X-Frame-Options', 'SAMEORIGIN');
+        $this->get('/')
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('X-Frame-Options', 'SAMEORIGIN')
+            ->assertHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
     }
 
     public function test_xss_in_product_name_is_escaped(): void
