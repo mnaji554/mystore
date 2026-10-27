@@ -144,6 +144,7 @@ class CheckoutTest extends TestCase
             ->assertSee('تحديد موقع التسليم على الخريطة')
             ->assertSee('استخدم موقعي الحالي')
             ->assertSee('OpenStreetMap')
+            ->assertSee('x-teleport="body"', false)
             ->set('address.full_name', 'زائر')->set('address.phone', '0501234567')->set('address.city', 'جدة')->set('address.street', 'شارع التحلية')
             ->call('setDeliveryLocation', 21.5433, 39.1728)
             ->call('next')->assertSet('step', 3)

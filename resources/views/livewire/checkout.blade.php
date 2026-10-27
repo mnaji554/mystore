@@ -83,39 +83,41 @@
                             <p class="text-sm font-bold text-rose-600">{{ $errors->first('deliveryLatitude') ?: $errors->first('deliveryLongitude') }}</p>
                         @endif
 
-                        <div x-show="mapOpen" x-cloak x-transition.opacity
-                             @click.self="closeMap()"
-                             class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:p-6"
-                             role="dialog" aria-modal="true" aria-labelledby="delivery-map-title">
-                            <section class="card relative flex max-h-[92vh] w-full max-w-5xl flex-col gap-4 overflow-y-auto p-4 shadow-2xl sm:p-6">
-                                <header class="flex items-start justify-between gap-4">
-                                    <div>
-                                        <h2 id="delivery-map-title" class="text-lg font-extrabold">تحديد موقع التسليم على الخريطة</h2>
-                                        <p class="mt-1 text-sm text-slate-500">اضغط على الخريطة أو حرّك العلامة لاختيار الموقع. تُحمّل الخريطة من OpenStreetMap.</p>
-                                    </div>
-                                    <button type="button" @click="closeMap()" class="btn-ghost !p-2" aria-label="إغلاق النافذة">
-                                        <x-icon name="close" />
-                                    </button>
-                                </header>
-
-                                <div x-ref="map" wire:ignore dir="ltr" class="h-[55vh] min-h-80 max-h-[34rem] rounded-xl bg-slate-100 dark:bg-slate-800"></div>
-                                <p x-show="pendingLatitude !== null" class="text-sm font-semibold text-slate-600 dark:text-slate-300" dir="ltr">
-                                    <span x-text="pendingLatitude?.toFixed(6)"></span>,
-                                    <span x-text="pendingLongitude?.toFixed(6)"></span>
-                                </p>
-                                <p x-show="locationMessage" x-text="locationMessage" role="status" class="text-sm font-bold text-rose-600"></p>
-
-                                <footer class="flex flex-wrap justify-between gap-3">
-                                    <button type="button" @click="useCurrentLocation()" class="btn-outline">استخدم موقعي الحالي</button>
-                                    <div class="flex gap-2">
-                                        <button type="button" @click="closeMap()" class="btn-ghost">إلغاء</button>
-                                        <button type="button" @click="confirmLocation()" :disabled="pendingLatitude === null" class="btn-primary">
-                                            تأكيد الموقع
+                        <template x-teleport="body">
+                            <div x-show="mapOpen" x-cloak x-transition.opacity
+                                 @click.self="closeMap()"
+                                 class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:p-6"
+                                 role="dialog" aria-modal="true" aria-labelledby="delivery-map-title">
+                                <section class="card relative flex max-h-[92vh] w-full max-w-5xl flex-col gap-4 overflow-y-auto p-4 shadow-2xl sm:p-6">
+                                    <header class="flex items-start justify-between gap-4">
+                                        <div>
+                                            <h2 id="delivery-map-title" class="text-lg font-extrabold">تحديد موقع التسليم على الخريطة</h2>
+                                            <p class="mt-1 text-sm text-slate-500">اضغط على الخريطة أو حرّك العلامة لاختيار الموقع. تُحمّل الخريطة من OpenStreetMap.</p>
+                                        </div>
+                                        <button type="button" @click="closeMap()" class="btn-ghost !p-2" aria-label="إغلاق النافذة">
+                                            <x-icon name="close" />
                                         </button>
-                                    </div>
-                                </footer>
-                            </section>
-                        </div>
+                                    </header>
+
+                                    <div x-ref="map" wire:ignore dir="ltr" class="h-[55vh] min-h-80 max-h-[34rem] rounded-xl bg-slate-100 dark:bg-slate-800"></div>
+                                    <p x-show="pendingLatitude !== null" class="text-sm font-semibold text-slate-600 dark:text-slate-300" dir="ltr">
+                                        <span x-text="pendingLatitude?.toFixed(6)"></span>,
+                                        <span x-text="pendingLongitude?.toFixed(6)"></span>
+                                    </p>
+                                    <p x-show="locationMessage" x-text="locationMessage" role="status" class="text-sm font-bold text-rose-600"></p>
+
+                                    <footer class="flex flex-wrap justify-between gap-3">
+                                        <button type="button" @click="useCurrentLocation()" class="btn-outline">استخدم موقعي الحالي</button>
+                                        <div class="flex gap-2">
+                                            <button type="button" @click="closeMap()" class="btn-ghost">إلغاء</button>
+                                            <button type="button" @click="confirmLocation()" :disabled="pendingLatitude === null" class="btn-primary">
+                                                تأكيد الموقع
+                                            </button>
+                                        </div>
+                                    </footer>
+                                </section>
+                            </div>
+                        </template>
                     </div>
                 @endif
 
