@@ -71,25 +71,24 @@
                         locationMessage: '',
                         startGeolocation() {
                             this.locationMessage = 'جارٍ تحديد الموقع...';
-                            $wire.clearDeliveryLocation().then(() => {
-                                if (!navigator.geolocation) {
-                                    this.locationMessage = 'متصفحك لا يدعم تحديد الموقع. استخدم متصفحاً حديثاً واتصالاً آمناً.';
-                                    return;
-                                }
+                            if (!navigator.geolocation) {
+                                this.locationMessage = 'متصفحك لا يدعم تحديد الموقع. استخدم متصفحاً حديثاً واتصالاً آمناً.';
+                                return;
+                            }
 
-                                navigator.geolocation.getCurrentPosition(async (position) => {
-                                    try {
-                                        await $wire.setDeliveryLocation(position.coords.latitude, position.coords.longitude);
-                                        this.locationMessage = 'تم تحديد موقع التسليم بنجاح.';
-                                    } catch {
-                                        this.locationMessage = 'تعذر التحقق من الموقع. يرجى المحاولة مرة أخرى.';
-                                    }
-                                }, (error) => {
-                                    this.locationMessage = error.code === 1
-                                        ? 'يرجى السماح بالوصول إلى الموقع لإكمال الطلب.'
-                                        : 'تعذر تحديد موقعك. تحقق من إعدادات الجهاز وحاول مجدداً.';
-                                }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-                            });
+                            navigator.geolocation.getCurrentPosition(async (position) => {
+                                try {
+                                    await $wire.clearDeliveryLocation();
+                                    await $wire.setDeliveryLocation(position.coords.latitude, position.coords.longitude);
+                                    this.locationMessage = 'تم تحديد موقع التسليم بنجاح.';
+                                } catch {
+                                    this.locationMessage = 'تعذر التحقق من الموقع. يرجى المحاولة مرة أخرى.';
+                                }
+                            }, (error) => {
+                                this.locationMessage = error.code === 1
+                                    ? 'يرجى السماح بالوصول إلى الموقع لإكمال الطلب.'
+                                    : 'تعذر تحديد موقعك. تحقق من إعدادات الجهاز وحاول مجدداً.';
+                            }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
                         }
                     }" class="mt-5 space-y-2 rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                         <p class="font-bold">موقع التسليم <span class="text-rose-600">*</span></p>
