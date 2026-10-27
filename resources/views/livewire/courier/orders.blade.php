@@ -8,25 +8,38 @@
         locationMessage: '',
         startGeolocation() {
             this.locationMessage = 'جارٍ تحديد موقعك...';
-            $wire.clearCourierLocation().then(() => {
-                if (!navigator.geolocation) {
-                    this.locationMessage = 'متصفحك لا يدعم تحديد الموقع. استخدم متصفحاً حديثاً واتصالاً آمناً.';
+            if (!window.isSecureContext) {
+                this.locationMessage = 'يلزم فتح الصفحة عبر HTTPS أو من localhost لاستخدام موقعك الحالي.';
+                return;
+            }
+
+            if (!navigator.geolocation) {
+                this.locationMessage = 'متصفحك لا يدعم تحديد الموقع.';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                try {
+                    await $wire.clearCourierLocation();
+                    await $wire.setCourierLocation(position.coords.latitude, position.coords.longitude);
+                    this.locationMessage = 'تم تحديث موقعك.';
+                } catch (error) {
+                    console.error('Unable to update the courier location.', error);
+                    this.locationMessage = 'تعذر حفظ موقعك. يرجى المحاولة مرة أخرى.';
+                }
+            }, async (error) => {
+                try {
+                    await $wire.clearCourierLocation();
+                } catch (clearError) {
+                    console.error('Unable to clear the courier location.', clearError);
+                    this.locationMessage = 'تعذر تحديث الموقع. يرجى إعادة تحميل الصفحة والمحاولة مرة أخرى.';
                     return;
                 }
 
-                navigator.geolocation.getCurrentPosition(async (position) => {
-                    try {
-                        await $wire.setCourierLocation(position.coords.latitude, position.coords.longitude);
-                        this.locationMessage = 'تم تحديث موقعك.';
-                    } catch {
-                        this.locationMessage = 'تعذر التحقق من الموقع. يرجى المحاولة مرة أخرى.';
-                    }
-                }, (error) => {
-                    this.locationMessage = error.code === 1
-                        ? 'يرجى السماح بالوصول إلى الموقع لعرض المسافات واستلام الطلبات.'
-                        : 'تعذر تحديد موقعك. تحقق من إعدادات الجهاز وحاول مجدداً.';
-                }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-            });
+                this.locationMessage = error.code === 1
+                    ? 'إذن الموقع محظور أو مرفوض. فعّل إذن الموقع لهذا الموقع من إعدادات المتصفح ثم أعد المحاولة.'
+                    : 'تعذر تحديد موقعك. تحقق من إعدادات الجهاز وحاول مجدداً.';
+            }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
         }
     }" class="card flex flex-wrap items-center justify-between gap-3 p-4">
         <div>
