@@ -10,7 +10,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <p class="font-bold">موقعك الحالي</p>
-                <p class="text-sm text-slate-500">استخدم موقع الجهاز أو حدّد موقعك يدويًا على الخريطة لعرض المسافات واستلام الطلبات.</p>
+                <p class="text-sm text-slate-500">استخدم موقع جهازك أو حدّد موقعك يدويًا على الخريطة لعرض المسافات واستلام الطلبات.</p>
                 <p x-show="locationMessage" x-text="locationMessage" role="status" class="mt-1 text-sm text-slate-600 dark:text-slate-300"></p>
             </div>
             <div class="flex flex-wrap gap-2">
