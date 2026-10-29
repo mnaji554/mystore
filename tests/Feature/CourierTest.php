@@ -169,12 +169,17 @@ class CourierTest extends TestCase
         $this->assertSame(OrderStatus::Shipped, $order->fresh()->status);
 
         Livewire::actingAs($courier)->test(CourierOrders::class)
-            ->call('advance', $order->id);
+            ->call('prepareDelivery', $order->id)
+            ->call('completeDelivery')
+            ->assertHasNoErrors()
+            ->assertDispatched('notify', message: 'تم تأكيد تسليم الطلب.', type: 'success');
 
         $order->refresh();
         $this->assertSame(OrderStatus::Delivered, $order->status);
         $this->assertSame(PaymentStatus::Paid, $order->payment_status);
         $this->assertEquals(25, $order->shipping_cost);
+        $this->assertNotNull($order->delivered_at);
+        $this->assertSame([], $order->delivery_photos);
     }
 
     public function test_admin_cannot_assign_an_inactive_or_non_courier_account(): void
@@ -223,10 +228,70 @@ class CourierTest extends TestCase
             ->assertSee('OpenStreetMap')
             ->assertSee($assigned->order_number)
             ->assertSee($other->order_number)
+            ->assertSee($other->items()->value('name'))
             ->assertSee($legacy->order_number)
             ->assertSee('111.2 كم')
             ->assertSee('المسافة غير متاحة لهذا الطلب لعدم توفر إحداثيات التسليم.')
             ->assertDontSee($cancelled->order_number);
+    }
+
+    public function test_courier_can_complete_delivery_with_private_proof_photos(): void
+    {
+        Storage::fake('private_documents');
+        $order = $this->order();
+        $courier = $this->courier();
+        $order->update(['courier_id' => $courier->id, 'status' => OrderStatus::Shipped]);
+
+        Livewire::actingAs($courier)->test(CourierOrders::class)
+            ->call('prepareDelivery', $order->id)
+            ->set('deliveryPhotos', [UploadedFile::fake()->image('proof.jpg', 320, 240)])
+            ->call('completeDelivery')
+            ->assertHasNoErrors()
+            ->assertDispatched('notify', message: 'تم تأكيد تسليم الطلب.', type: 'success');
+
+        $delivered = $order->fresh();
+        $this->assertSame(OrderStatus::Delivered, $delivered->status);
+        $this->assertNotNull($delivered->delivered_at);
+        $this->assertCount(1, $delivered->delivery_photos);
+        Storage::disk('private_documents')->assertExists($delivered->delivery_photos[0]['path']);
+        Storage::disk('private_documents')->assertExists($delivered->delivery_photos[0]['thumb_path']);
+
+        $photoUrl = route('courier.orders.proof', [
+            'order' => $delivered->id,
+            'index' => 0,
+            'variant' => 'thumb',
+        ]);
+        $photoResponse = $this->actingAs($courier)->get($photoUrl);
+        $photoResponse->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->assertStringContainsString('private', $photoResponse->headers->get('Cache-Control'));
+
+        $this->actingAs($this->courier())->get($photoUrl)->assertNotFound();
+    }
+
+    public function test_courier_delivery_photos_are_optional_but_validated(): void
+    {
+        $order = $this->order();
+        $courier = $this->courier();
+        $order->update(['courier_id' => $courier->id, 'status' => OrderStatus::Shipped]);
+
+        Livewire::actingAs($courier)->test(CourierOrders::class)
+            ->call('prepareDelivery', $order->id)
+            ->set('deliveryPhotos', [UploadedFile::fake()->create('malicious.php', 10, 'application/x-php')])
+            ->call('completeDelivery')
+            ->assertHasErrors('deliveryPhotos.0')
+            ->call('prepareDelivery', $order->id)
+            ->set('deliveryPhotos', [
+                UploadedFile::fake()->image('one.jpg'),
+                UploadedFile::fake()->image('two.jpg'),
+                UploadedFile::fake()->image('three.jpg'),
+                UploadedFile::fake()->image('four.jpg'),
+            ])
+            ->call('completeDelivery')
+            ->assertHasErrors('deliveryPhotos');
+
+        $this->assertSame(OrderStatus::Shipped, $order->fresh()->status);
+        $this->assertNull($order->fresh()->delivered_at);
     }
 
     public function test_courier_can_atomically_claim_an_unassigned_order(): void

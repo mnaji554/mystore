@@ -142,11 +142,19 @@ class OrderService
         }
     }
 
-    public function changeStatus(Order $order, OrderStatus $to, ?User $actor = null, ?string $note = null): Order
-    {
+    /**
+     * @param  list<array{path:string, thumb_path:string}>|null  $deliveryPhotos
+     */
+    public function changeStatus(
+        Order $order,
+        OrderStatus $to,
+        ?User $actor = null,
+        ?string $note = null,
+        ?array $deliveryPhotos = null,
+    ): Order {
         $from = null;
 
-        DB::transaction(function () use ($order, $to, $actor, $note, &$from) {
+        DB::transaction(function () use ($order, $to, $actor, $note, $deliveryPhotos, &$from) {
             $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
             $from = $locked->status;
 
@@ -155,6 +163,14 @@ class OrderService
             }
 
             $attributes = ['status' => $to];
+
+            if ($to === OrderStatus::Delivered) {
+                $attributes['delivered_at'] = now();
+
+                if ($deliveryPhotos !== null) {
+                    $attributes['delivery_photos'] = $deliveryPhotos;
+                }
+            }
 
             if ($to === OrderStatus::Delivered && $locked->payment_method === 'cod' && $locked->payment_status !== PaymentStatus::Paid) {
                 $attributes['payment_status'] = PaymentStatus::Paid;

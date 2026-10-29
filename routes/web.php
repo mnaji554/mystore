@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CourierDocumentController;
 use App\Http\Controllers\AdminInvoiceController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CheckoutResultController;
+use App\Http\Controllers\Courier\DeliveryPhotoController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\SeoController;
@@ -85,6 +86,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 */
 Route::middleware('auth')->group(function () {
     Route::get('/courier/orders', CourierOrders::class)->middleware('courier')->name('courier.orders');
+    Route::get('/courier/orders/{order}/proof/{index}/{variant}', DeliveryPhotoController::class)
+        ->middleware('courier')
+        ->where(['index' => '[0-9]+', 'variant' => 'image|thumb'])
+        ->name('courier.orders.proof');
 
     Route::get('/wishlist', WishlistPage::class)->name('wishlist');
 

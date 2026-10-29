@@ -21,7 +21,7 @@ class Order extends Model
         'shipping_address', 'delivery_latitude', 'delivery_longitude', 'shipping_method_id', 'shipping_method_name', 'tracking_number',
         'tracking_url', 'payment_method', 'payment_status', 'status', 'coupon_code', 'subtotal',
         'discount_total', 'coupon_discount', 'shipping_cost', 'tax_total', 'grand_total',
-        'currency', 'customer_note', 'placed_at', 'courier_id',
+        'currency', 'customer_note', 'placed_at', 'courier_id', 'delivered_at', 'delivery_photos',
     ];
 
     protected function casts(): array
@@ -39,6 +39,8 @@ class Order extends Model
             'tax_total' => 'decimal:2',
             'grand_total' => 'decimal:2',
             'placed_at' => 'datetime',
+            'delivered_at' => 'datetime',
+            'delivery_photos' => 'array',
         ];
     }
 

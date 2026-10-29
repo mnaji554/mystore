@@ -16,8 +16,13 @@ class ImageService
     private string $disk = 'public';
 
     /** @return array{path:string, thumb_path:string} */
-    public function store(UploadedFile $file, string $directory, int $maxSize = 1400, int $thumbSize = 480): array
-    {
+    public function store(
+        UploadedFile $file,
+        string $directory,
+        int $maxSize = 1400,
+        int $thumbSize = 480,
+        string $disk = 'public',
+    ): array {
         $info = @getimagesize($file->getRealPath());
 
         if (! $info || ! in_array($info['mime'], self::ALLOWED_MIMES, true)) {
@@ -33,15 +38,20 @@ class ImageService
         $source = $this->applyOrientation($source, $file->getRealPath(), $info['mime']);
 
         try {
-            return $this->storeGd($source, $directory, $maxSize, $thumbSize);
+            return $this->storeGd($source, $directory, $maxSize, $thumbSize, $disk);
         } finally {
             imagedestroy($source);
         }
     }
 
     /** @return array{path:string, thumb_path:string} */
-    public function storeGd(GdImage $source, string $directory, int $maxSize = 1400, int $thumbSize = 480): array
-    {
+    public function storeGd(
+        GdImage $source,
+        string $directory,
+        int $maxSize = 1400,
+        int $thumbSize = 480,
+        string $disk = 'public',
+    ): array {
         $directory = trim($directory, '/');
         $name = Str::random(32);
         $ext = function_exists('imagewebp') ? 'webp' : 'jpg';
@@ -49,8 +59,8 @@ class ImageService
         $path = "{$directory}/{$name}.{$ext}";
         $thumb = "{$directory}/thumbs/{$name}.{$ext}";
 
-        $this->write($this->resize($source, $maxSize), $path, $ext, true);
-        $this->write($this->resize($source, $thumbSize), $thumb, $ext, true);
+        $this->write($this->resize($source, $maxSize), $path, $ext, $disk, true);
+        $this->write($this->resize($source, $thumbSize), $thumb, $ext, $disk, true);
 
         return ['path' => $path, 'thumb_path' => $thumb];
     }
@@ -82,7 +92,7 @@ class ImageService
         return $target;
     }
 
-    private function write(GdImage $image, string $path, string $ext, bool $destroy): void
+    private function write(GdImage $image, string $path, string $ext, string $disk, bool $destroy): void
     {
         ob_start();
 
@@ -103,7 +113,7 @@ class ImageService
             imagedestroy($image);
         }
 
-        Storage::disk($this->disk)->put($path, $binary);
+        Storage::disk($disk)->put($path, $binary);
     }
 
     private function applyOrientation(GdImage $image, string $file, string $mime): GdImage
