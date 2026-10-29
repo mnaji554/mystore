@@ -210,9 +210,15 @@ class CourierTest extends TestCase
         $assigned = $this->order();
         $other = $this->order();
         $legacy = $this->order();
+        $awaiting = $this->order();
+        $ready = $this->order();
+        $completed = $this->order();
         $cancelled = $this->order();
         $courier = $this->courier();
         $assigned->update(['courier_id' => $courier->id, 'status' => OrderStatus::Shipped]);
+        $awaiting->update(['courier_id' => $courier->id, 'status' => OrderStatus::Confirmed]);
+        $ready->update(['courier_id' => $courier->id, 'status' => OrderStatus::Processing]);
+        $completed->update(['courier_id' => $courier->id, 'status' => OrderStatus::Delivered]);
         $other->update([
             'delivery_latitude' => 0,
             'delivery_longitude' => 1,
@@ -227,8 +233,15 @@ class CourierTest extends TestCase
             ->assertSee('لا يتطلب هذا الخيار إذن GPS.')
             ->assertSee('OpenStreetMap')
             ->assertSee($assigned->order_number)
+            ->assertSee($awaiting->order_number)
+            ->assertSee($ready->order_number)
+            ->assertSee($completed->order_number)
             ->assertSee($other->order_number)
             ->assertSee($other->items()->value('name'))
+            ->assertSee('بانتظار تجهيز المتجر (1)')
+            ->assertSee('جاهزة للاستلام من المتجر (1)')
+            ->assertSee('قيد التوصيل (1)')
+            ->assertSee('تم التسليم')
             ->assertSee($legacy->order_number)
             ->assertSee('111.2 كم')
             ->assertSee('المسافة غير متاحة لهذا الطلب لعدم توفر إحداثيات التسليم.')

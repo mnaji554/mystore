@@ -190,12 +190,26 @@ class Orders extends Component
         $activeOrders->each(function (Order $order): void {
             $order->distance_km = $this->distanceInKilometers($order);
         });
+        $awaitingOrders = $activeOrders->filter(fn (Order $order): bool => in_array(
+            $order->status,
+            [OrderStatus::Pending, OrderStatus::Confirmed],
+            true,
+        ))->values();
+        $readyOrders = $activeOrders->filter(fn (Order $order): bool => $order->status === OrderStatus::Processing)->values();
+        $inDeliveryOrders = $activeOrders->filter(fn (Order $order): bool => $order->status === OrderStatus::Shipped)->values();
         $completedOrders = Order::query()->with($items)->where('courier_id', auth()->id())
             ->where('status', OrderStatus::Delivered)
             ->latest('placed_at')->limit(20)
             ->get($columns);
 
-        return view('livewire.courier.orders', compact('activeOrders', 'availableOrders', 'completedOrders'))
+        return view('livewire.courier.orders', compact(
+            'activeOrders',
+            'availableOrders',
+            'awaitingOrders',
+            'readyOrders',
+            'inDeliveryOrders',
+            'completedOrders',
+        ))
             ->layout('components.layouts.app', ['title' => 'طلبات التوصيل', 'noindex' => true]);
     }
 
